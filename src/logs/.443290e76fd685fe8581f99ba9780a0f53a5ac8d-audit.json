@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/.443290e76fd685fe8581f99ba9780a0f53a5ac8d-audit.json",
+    "files": [
+        {
+            "date": 1735036498130,
+            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2024-12-24.log",
+            "hash": "6f0c6cd575a4b8435add53d52df2cf5e5f59fa13e435895d99e4891d58ce928e"
+        }
+    ],
+    "hashType": "sha256"
+}
