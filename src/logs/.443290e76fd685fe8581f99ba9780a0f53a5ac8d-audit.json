@@ -6,9 +6,39 @@
     "auditLog": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/.443290e76fd685fe8581f99ba9780a0f53a5ac8d-audit.json",
     "files": [
         {
-            "date": 1735036498130,
-            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2024-12-24.log",
-            "hash": "6f0c6cd575a4b8435add53d52df2cf5e5f59fa13e435895d99e4891d58ce928e"
+            "date": 1735456686636,
+            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2024-12-29.log",
+            "hash": "396546662d3dd5061097c795715047278b9ff83e7d752671140671498fd18efb"
+        },
+        {
+            "date": 1735532132960,
+            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2024-12-30.log",
+            "hash": "a66fa165c7088285460214f3d9426d0af5164cd498bbf489dc783db1fff384c9"
+        },
+        {
+            "date": 1736051787485,
+            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-01-05.log",
+            "hash": "680bf99683f59de6aa4bc4a4ad0952c78a9c384fa53a151dc01d863093be073d"
+        },
+        {
+            "date": 1736142530803,
+            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-01-06.log",
+            "hash": "83fa86e75c0786ee363330c02500c62cb1b6d6d73b232bac714c45a6ad1a31bc"
+        },
+        {
+            "date": 1736227015952,
+            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-01-07.log",
+            "hash": "b8570d8817111a5789b852bbf727e82185e654952958b889b5027e96dc65ca94"
+        },
+        {
+            "date": 1736315039657,
+            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-01-08.log",
+            "hash": "f872e27291f7e217aa67a9f43ac7ed3b91e65c5044bae9efc27e982f7af02b3e"
+        },
+        {
+            "date": 1736404169233,
+            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-01-09.log",
+            "hash": "473a1455d23db5d895b345c737070266be16f52872febaef11b31cd8a1afe935"
         }
     ],
     "hashType": "sha256"

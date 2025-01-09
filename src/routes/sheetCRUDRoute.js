@@ -5,10 +5,16 @@ const {
   createRow, 
   getData, 
   updateCell, 
-  deleteData 
+  deleteData, 
+  bulkUpload,
+  notifyChange,
+  deleteRow
 } = require('../controllers/sheetCRUDController');
 
 // Route to add a new row to a Google Sheet
+router.post('/bulk-upload', bulkUpload);
+router.post('/notify-change', notifyChange);
+router.post('/delete-row', deleteRow)
 router.post('/add-row', createRow);
 
 // Route to get data from a Google Sheet with optional filtering

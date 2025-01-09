@@ -2,6 +2,59 @@
 
 const userService = require('../services/userService');
 
+exports.registerAdmin = async (req, res) => {
+  try {
+    const user = await userService.createAdmin(req.body);
+    // console.log("user")
+    res.status(201).json(user);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+exports.loginUser = async (req, res) => {
+  try {
+    // Call the service to log the user in
+    const user = await userService.loginUser(req.body);
+
+    // Send back the user and access token
+    res.status(200).json({
+      message: 'Login successful',
+      user: user.user,
+      accessToken: user.accessToken,
+    });
+  } catch (error) {
+    // Handle any errors
+    res.status(400).json({ error: error.message });
+  }
+};
+
+exports.inviteUser = async (req,res)=>{
+  console.log("req body from ivite User",req.body);
+  try {
+    const user = await userService.inviteUser(req.body);
+    res.status(201).json(user);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+}
+
+exports.verifyUserInvitation = async (req,res)=>{
+  try {
+    const user = await userService.verifyUserInvitation(req.body);
+    res.status(201).json(user);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+}
+exports.resetPassword = async (req,res)=>{
+  try {
+    const user = await userService.resetPassword(req.body);
+    res.status(201).json(user);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+}
+
 exports.createUser = async (req, res) => {
   try {
     const user = await userService.createUser(req.body);

@@ -3,16 +3,19 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
 const { authMiddleware } = require('../middlewares/authMiddleware');
-const  {checkPermission}= require('../middlewares/rbacMiddleware');
+const { checkPermission } = require('../middlewares/rbacMiddleware');
 
 // Route for creating a new user and getting all users
+router.route('/admin-register').post(userController.registerAdmin);
+router.route('/login').post(userController.loginUser);
+router.route('/invite-user').post(authMiddleware('admin'), userController.inviteUser);
+router.route('/verify-user').post(userController.verifyUserInvitation);
+router.route('/reset-password').post( userController.resetPassword);
 router
   .route('/')
-  .post(
-    userController.createUser,
-  )
+  .post(userController.createUser)
   .get(
-    authMiddleware('admin', 'manager', 'employee'), // Example: All roles can view users
+    authMiddleware('admin', 'manager', 'employee'),
     checkPermission('read'), // Ensure permissions for reading users
     userController.getAllUsers,
   );

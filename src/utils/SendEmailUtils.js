@@ -4,14 +4,14 @@ const SendEmailUtils = async (EmailTo, EmailText, EmailSubject) => {
   let transporter = nodemailer.createTransport({
     //from where to send email
     //this is for gmail, we can use yahoo mail or any smtp provider
-    host: 'mail.privateemail.com',
+    host: 'smtp.gmail.com',
     port: 465,
     secure: true,
     // logger: true,
     // debug: true,
     auth: {
-      user: process.env.EMAIL_ADDRESS,
-      pass: process.env.EMAIL_TOKEN,
+      user: process.env.SMTP_EMAIL,
+      pass: process.env.SMTP_PASSWORD,
     },
     tls: {
       rejectUnauthorized: true,
@@ -20,7 +20,7 @@ const SendEmailUtils = async (EmailTo, EmailText, EmailSubject) => {
 
   // send mail with defined transport object
   let mailOptions = {
-    from: 'NetWorth Team <team@getnetworth.app>',
+    from: 'VNP Team <team@getnetworth.app>',
     to: EmailTo, // list of receivers
     subject: EmailSubject, // Subject line
     text: EmailText, // plain text body

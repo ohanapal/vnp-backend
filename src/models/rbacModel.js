@@ -2,8 +2,8 @@ const mongoose = require('mongoose');
 
 const userRoleSchema = new mongoose.Schema({
   user: {
-    type: mongoose.Schema.Types.ObjectId,  // Referencing the ObjectId of the User model
-    ref: 'User',  // Refers to the 'User' model
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     required: true,
   },
   role: {

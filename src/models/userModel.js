@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const userSchema = new Schema({
-  username: {
+  name: {
     type: String,
     required: true,
     unique: true,
@@ -18,9 +18,24 @@ const userSchema = new Schema({
   },
   role: {
     type: String,
-    enum: ['admin', 'manager'], // Match these with your roles in roles.json
+    enum: ['admin', 'portfolio', 'sub-portfolio', 'property'], // Match these with your roles in roles.json
     required: true,
   },
+  // access:{
+  //   type: String,
+  //   enum: ['portfolio', 'sub-portfolio', 'property', 'admin'], // Match these with your roles in roles.json
+  //   required: true,
+  // },
+  connected_entity_id: {
+    type: [String],
+    required: function() {
+      return this.role !== 'admin';  // If the role is not admin, connected_entity_id is required
+    },
+  },
+  is_verified:{
+    type: Boolean,
+    default: false,
+  }
   // Other user-specific fields
 }, {
   timestamps: true, // Automatically manage createdAt and updatedAt fields
