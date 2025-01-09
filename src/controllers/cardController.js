@@ -9,7 +9,9 @@ const getMetrics = async (req, res) => {
       return res.status(400).json({ error: 'Both startdate and enddate must be provided together.' });
     }
 
-    const metrics = await calculateMetrics(selectedPortfolio, startDate, endDate);
+        const { role, connected_entity_id: connectedEntityIds } = req.user;
+
+    const metrics = await calculateMetrics(role,connectedEntityIds, selectedPortfolio, startDate, endDate);
     res.status(200).json(metrics);
   } catch (error) {
     console.error('Error in getMetrics:', error);

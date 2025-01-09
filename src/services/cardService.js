@@ -3,25 +3,48 @@ const portfolioModel = require('../models/portfolioModel'); // Replace with the 
 const AppError = require('../utils/appError');
 const moment = require('moment');
 
-const calculateMetrics = async (selectedPortfolio, startDate, endDate) => {
+const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, startDate, endDate) => {
   try {
     let query = {};
 
-    // Add portfolio filter if selectedPortfolio is provided
-    if (selectedPortfolio && selectedPortfolio !== 'all') {
-      const portfolio = await portfolioModel.findOne({ name: selectedPortfolio });
-      if (!portfolio) {
-        throw new AppError(`Portfolio with name "${selectedPortfolio}" not found.`, 404);
-      }
-      query.portfolio_name = portfolio._id;
-    }
-
-    // If startDate and endDate are provided, filter by date range
+    // Add date range filtering if provided
     if (startDate && endDate) {
-      const start = startDate ? new Date(startDate) : null;
-      const end = endDate ? new Date(endDate) : null;
+      const start = new Date(startDate);
+      const end = new Date(endDate);
 
       query.$and = [{ from: { $gte: start } }, { to: { $lte: end } }];
+    }
+
+    if (role !== 'admin') {
+      // Ensure connectedEntityIds is provided for non-admin roles
+      if (!connectedEntityIds || connectedEntityIds.length === 0) {
+        throw new AppError('No connected entity IDs provided for this role.', 403);
+      }
+
+      // Match connectedEntityIds with the appropriate field based on the role
+      const entityQuery = [];
+      if (role === 'portfolio') {
+        entityQuery.push({ portfolio_name: { $in: connectedEntityIds } });
+      }
+      if (role === 'sub-portfolio') {
+        entityQuery.push({ sub_portfolio: { $in: connectedEntityIds } });
+      }
+      if (role === 'property') {
+        entityQuery.push({ property_name: { $in: connectedEntityIds } });
+      }
+
+      if (entityQuery.length > 0) {
+        query.$or = entityQuery; // Match any of the entity criteria
+      }
+    } else {
+      // For admin, include selectedPortfolio filtering
+      if (selectedPortfolio && selectedPortfolio !== 'all') {
+        const portfolio = await portfolioModel.findOne({ name: selectedPortfolio });
+        if (!portfolio) {
+          throw new AppError(`Portfolio with name "${selectedPortfolio}" not found.`, 404);
+        }
+        query.portfolio_name = portfolio._id;
+      }
     }
 
     // Fetch matching documents from sheetDataModel based on the query
@@ -36,8 +59,6 @@ const calculateMetrics = async (selectedPortfolio, startDate, endDate) => {
       to: 1,
     });
 
-    // console.log('Documents:', documents);
-
     const totals = {
       ExpediaValue: 0,
       BookingValue: 0,
@@ -48,7 +69,6 @@ const calculateMetrics = async (selectedPortfolio, startDate, endDate) => {
       PortfolioCount: documents.length,
     };
 
-    // Helper function to parse and clean currency values
     const parseCurrency = (value) => {
       if (!value) return 0;
       const cleanedValue = value.trim().replace(/[^0-9.-]+/g, '');
@@ -56,7 +76,6 @@ const calculateMetrics = async (selectedPortfolio, startDate, endDate) => {
       return isNaN(parsedValue) ? 0 : parsedValue;
     };
 
-    // Process documents and calculate totals
     documents.forEach((doc) => {
       const expediaValue = parseCurrency(doc?.expedia?.amount_collectable);
       const bookingValue = parseCurrency(doc?.booking?.amount_collectable);
