@@ -110,13 +110,24 @@ const calculatePercentageChange = (current, previous) => {
 //   };
 // };
 
-const getRevenueMetrics = async (role, connectedEntityIds) => {
+const getRevenueMetrics = async (role, connectedEntityIds, startDate, endDate, propertyName) => {
   // Fetch and populate data
-  const data = await SheetData.find({}).populate('portfolio_name').populate('property_name').sort({ from: 1 });
+  const query = {};
+  if (startDate || endDate) {
+    query.from = {};
+    if (startDate) query.from.$gte = new Date(startDate);
+    if (endDate) query.from.$lte = new Date(endDate);
+  }
+
+  const data = await SheetData.find(query).populate('portfolio_name').populate('property_name').sort({ from: 1 });
   console.log('Data fetched:', data.length);
 
-  // Filter data based on role and connectedEntityIds
+  // Filter data based on role and connectedEntityIds or propertyName
   const filteredData = data.filter((item) => {
+    if (role === 'admin' && propertyName) {
+      return item.property_name?.name?.toLowerCase().includes(propertyName.toLowerCase());
+    }
+
     switch (role) {
       case 'portfolio':
         return connectedEntityIds.includes(item.portfolio_name?._id?.toString());
@@ -124,7 +135,7 @@ const getRevenueMetrics = async (role, connectedEntityIds) => {
         return connectedEntityIds.includes(item.sub_portfolio_name?._id?.toString());
       case 'property':
         return connectedEntityIds.includes(item.property_name?._id?.toString());
-      default: // Admin or other roles with access to all data
+      default: // Admin or other roles with no propertyName filter
         return true;
     }
   });
@@ -181,12 +192,6 @@ const getRevenueMetrics = async (role, connectedEntityIds) => {
   const collected = expediaCollected + bookingCollected + agodaCollected;
   const remaining = total - collected;
 
-  const previousMonth = {
-    total: total * 0.9,
-    collected: collected * 0.9,
-    remaining: remaining * 0.9,
-  };
-
   const chartData = Object.entries(monthlyData).map(([month, values]) => ({
     month,
     audited: Math.round(values.audited),
@@ -221,4 +226,93 @@ const getRevenueMetrics = async (role, connectedEntityIds) => {
   };
 };
 
-module.exports = { getRevenueMetrics };
+const getStatusDistribution = async (role, connectedEntityIds, startDate, endDate) => {
+  try {
+    // Parse start and end date from query parameters, with default values
+    const filter = {};
+
+    // If date range is provided, filter the data based on the date range
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999); // Set the end time to the end of the day
+      filter.from = { $gte: start, $lte: end }; // Filter for the specified date range
+    }
+
+    // Fetch data from the database based on the filter
+    const data = await SheetData.find(filter);
+
+    // Filter the data based on role and connectedEntityIds
+    const filteredData = data.filter((item) => {
+      switch (role) {
+        case 'portfolio':
+          return connectedEntityIds.includes(item.portfolio_name?._id?.toString());
+        case 'sub-portfolio':
+          return connectedEntityIds.includes(item.sub_portfolio_name?._id?.toString());
+        case 'property':
+          return connectedEntityIds.includes(item.property_name?._id?.toString());
+        default: // Admin or other roles with access to all data
+          return true;
+      }
+    });
+
+    // Initialize status count map
+    const statusCountMap = new Map();
+
+    // Count statuses from all OTA platforms
+    filteredData.forEach((item) => {
+      // Count Expedia statuses
+      if (item.expedia?.review_status) {
+        const status = item.expedia.review_status.replace(/\s+/g, '').toLowerCase(); // Normalize case
+        statusCountMap.set(status, (statusCountMap.get(status) || 0) + 1);
+      }
+
+      // Count Booking.com statuses
+      if (item.booking?.review_status) {
+        const status = item.booking.review_status.replace(/\s+/g, '').toLowerCase(); // Normalize case
+        statusCountMap.set(status, (statusCountMap.get(status) || 0) + 1);
+      }
+
+      // Count Agoda statuses
+      if (item.agoda?.review_status) {
+        const status = item.agoda.review_status.replace(/\s+/g, '').toLowerCase(); // Normalize case
+        statusCountMap.set(status, (statusCountMap.get(status) || 0) + 1);
+      }
+    });
+
+    // Define color mapping for different statuses
+    const colorMap = {
+      NoReviewRequired: '#0e7aff',
+      NothingToReport: '#ffcc00',
+      Invoiced: '#ff6600',
+      AccessRequired: '#ff3300',
+      WorkManagement: '#33cc33',
+      OTAPostCompleted: '#3399ff',
+      ReportedToProperty: '#9933ff',
+      Batch12102024: '#ff3399',
+      JobAssigned: '#ff9933',
+    };
+
+    // Convert map to array and format for frontend
+    const formattedData = Array.from(statusCountMap.entries()).map(([status, count]) => ({
+      status,
+      count,
+      fill: colorMap[status] || '#808080', // Default gray color if status not in colorMap
+    }));
+
+    // Calculate total based on the filtered data
+    // const total = formattedData.reduce((acc, curr) => acc + curr.count, 0);
+    const total = filteredData.length;
+
+    // Return the formatted data and total
+    return {
+      data: formattedData,
+      total,
+    };
+  } catch (error) {
+    console.error('Error fetching status distribution:', error);
+    throw new Error('Internal server error');
+  }
+};
+
+module.exports = { getRevenueMetrics, getStatusDistribution };
