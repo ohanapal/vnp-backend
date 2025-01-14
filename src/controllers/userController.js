@@ -28,32 +28,32 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-exports.inviteUser = async (req,res)=>{
-  console.log("req body from ivite User",req.body);
+exports.inviteUser = async (req, res) => {
+  console.log('req body from ivite User', req.body);
   try {
     const user = await userService.inviteUser(req.body);
     res.status(201).json(user);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
-}
+};
 
-exports.verifyUserInvitation = async (req,res)=>{
+exports.verifyUserInvitation = async (req, res) => {
   try {
     const user = await userService.verifyUserInvitation(req.body);
     res.status(201).json(user);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
-}
-exports.resetPassword = async (req,res)=>{
+};
+exports.resetPassword = async (req, res) => {
   try {
     const user = await userService.resetPassword(req.body);
     res.status(201).json(user);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
-}
+};
 
 exports.createUser = async (req, res) => {
   try {
@@ -78,8 +78,13 @@ exports.getUserById = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await userService.getAllUsers();
-    res.status(200).json(users);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const searchQuery = req.query.search || ''; // Extract search query from request
+    const currentUserId = req.user.id; // Assuming req.user contains the logged-in user's details
+
+    const result = await userService.getAllUsers(page, limit, currentUserId, searchQuery);
+    res.status(200).json(result);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

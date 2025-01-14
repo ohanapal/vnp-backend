@@ -8,7 +8,9 @@ const SendEmailUtils = require('../utils/SendEmailUtils');
 const generator = require('generate-password');
 const { generateLink } = require('../utils/invitationLink');
 const AppError = require('../utils/appError');
-
+const Portfolio = require('../models/portfolioModel'); // Replace with actual path
+const Property = require('../models/propertyModel'); // Replace with actual path
+const SubPortfolio = require('../models/subPortfolioModel');
 exports.createAdmin = async (userData) => {
   const { password, ...otherData } = userData; // Destructure password from other user data
 
@@ -47,7 +49,7 @@ exports.loginUser = async (userData) => {
   if (!user) {
     throw new Error('User not found');
   }
-  if(!user.is_verified){
+  if (!user.is_verified) {
     throw new Error('User not verified');
   }
 
@@ -98,7 +100,7 @@ exports.inviteUser = async (userData) => {
   // Create a new user
   const user = new User({
     role,
-    name: "temp",
+    name: 'temp',
     password: tempPassword,
     email,
     access,
@@ -109,10 +111,9 @@ exports.inviteUser = async (userData) => {
   await user.save();
 
   // Insert the temporary password into the TempPassword collection
-  
 
   const confirmationToken = generateLink(email);
-  console.log("Confirmation link: " + confirmationToken);
+  console.log('Confirmation link: ' + confirmationToken);
   // Send the temporary password via email
   const emailMessage = `Your Temporary Password is: ${tempPassword}. Click here to confirm your invitation: ${confirmationToken}`;
   const emailSubject = 'VNP';
@@ -161,7 +162,7 @@ exports.verifyUserInvitation = async (userData) => {
   return { user };
 };
 
-exports.resetPassword = async (userData)=>{
+exports.resetPassword = async (userData) => {
   const { email, password } = userData;
 
   // Find the user by email
@@ -181,13 +182,59 @@ exports.resetPassword = async (userData)=>{
   await user.save();
 
   return { user };
-}
+};
 exports.getUserById = async (userId) => {
   return await User.findById(userId);
 };
 
-exports.getAllUsers = async () => {
-  return await User.find();
+exports.getAllUsers = async (page = 1, limit = 10, currentUserId, searchQuery = '') => {
+  const skip = (page - 1) * limit;
+
+  // Build the base query
+  const query = {
+    role: { $ne: 'admin' },
+  };
+
+  // If a search query exists, add $or conditions
+  if (searchQuery) {
+    query.$or = [
+      { name: { $regex: searchQuery, $options: 'i' } }, // Case-insensitive search by name
+      { email: { $regex: searchQuery, $options: 'i' } }, // Case-insensitive search by email
+      { phone: { $regex: searchQuery, $options: 'i' } }, // Case-insensitive search by phone number
+      { connected_entity_id: { $regex: searchQuery, $options: 'i' } }, // Search within connected_entity_id
+    ];
+  }
+
+  const [users, total] = await Promise.all([User.find(query).skip(skip).limit(limit).lean(), User.countDocuments(query)]);
+
+  // Transform users to replace `connected_entity_id` with names
+  const transformedUsers = await Promise.all(
+    users.map(async (user) => {
+      if (user.role === 'portfolio') {
+        user.connected_entity_id = await Portfolio.find({
+          _id: { $in: user.connected_entity_id },
+        }).select('name -_id');
+      } else if (user.role === 'property') {
+        user.connected_entity_id = await Property.find({
+          _id: { $in: user.connected_entity_id },
+        }).select('name -_id');
+      } else if (user.role === 'sub-portfolio') {
+        user.connected_entity_id = await SubPortfolio.find({
+          _id: { $in: user.connected_entity_id },
+        }).select('name -_id');
+      }
+      // Convert connected_entity_id array of objects to an array of names
+      user.connected_entity_id = user.connected_entity_id.map((entity) => entity.name);
+      return user;
+    }),
+  );
+
+  return {
+    users: transformedUsers,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
+  };
 };
 
 exports.updateUser = async (userId, updateData) => {

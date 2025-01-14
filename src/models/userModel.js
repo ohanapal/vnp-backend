@@ -22,6 +22,12 @@ const userSchema = new Schema(
       enum: ['admin', 'portfolio', 'sub-portfolio', 'property'], // Match these with your roles in roles.json
       required: true,
     },
+    image: {
+      type: String,
+    },
+    phone_number: {
+      type: String,
+    },
     connected_entity_id: {
       type: [String],
       required: function () {
