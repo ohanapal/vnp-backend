@@ -2,6 +2,7 @@ const sheetDataModel = require('../models/sheetDataModel');
 const portfolioModel = require('../models/portfolioModel');
 const subPortfolioModel = require('../models/subPortfolioModel'); // Import the SubPortfolio model
 const propertyModel = require('../models/propertyModel'); // Assuming this is your property model
+const AppError = require('../utils/appError');
 
 const getPortfolioSheetData = async ({ page, limit, search, sortBy, sortOrder, filters, role, connectedEntityIds }) => {
   try {
@@ -152,7 +153,7 @@ const updateSheetDataService = async (id, data, role, connectedEntityIds) => {
       // Update the sheet data with the modified data
       return await sheetDataModel.findByIdAndUpdate(id, data, { new: true });
     } else {
-      throw new Error('You are not authorized to update this data');
+      throw new AppError('You are not authorized to update this data');
     }
   }
 };

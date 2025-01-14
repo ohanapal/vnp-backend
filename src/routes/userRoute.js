@@ -27,7 +27,7 @@ router.route('/').get(authMiddleware('admin', 'portfolio','sub-portfolio', 'prop
 router
   .route('/:id')
   .put(
-    authMiddleware('admin', 'manager'), // Example: Only admins and managers can update users
+    authMiddleware('admin'), // Example: Only admins and managers can update users
     updateUser,
   )
   .delete(

@@ -1,6 +1,7 @@
 // controllers/userController.js
 
 const userService = require('../services/userService');
+const AppError = require('../utils/appError');
 
 exports.registerAdmin = async (req, res) => {
   try {
@@ -55,27 +56,6 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
-exports.createUser = async (req, res) => {
-  try {
-    const user = await userService.createUser(req.body);
-    res.status(201).json(user);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-};
-
-exports.getUserById = async (req, res) => {
-  try {
-    const user = await userService.getUserById(req.params.id);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    res.status(200).json(user);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-};
-
 exports.getAllUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -91,7 +71,11 @@ exports.getAllUsers = async (req, res) => {
 };
 
 exports.updateUser = async (req, res) => {
+  const { role } = req.user;
   try {
+    if (role !== 'admin') {
+      throw new AppError('You are not authorized to update this data');
+    }
     const user = await userService.updateUser(req.params.id, req.body);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -103,7 +87,11 @@ exports.updateUser = async (req, res) => {
 };
 
 exports.deleteUser = async (req, res) => {
+  const { role } = req.user;
   try {
+    if (role !== 'admin') {
+      throw new AppError('You are not authorized to update this data');
+    }
     const user = await userService.deleteUser(req.params.id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });

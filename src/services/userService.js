@@ -183,9 +183,6 @@ exports.resetPassword = async (userData) => {
 
   return { user };
 };
-exports.getUserById = async (userId) => {
-  return await User.findById(userId);
-};
 
 exports.getAllUsers = async (page = 1, limit = 10, currentUserId, searchQuery = '') => {
   const skip = (page - 1) * limit;
@@ -193,6 +190,7 @@ exports.getAllUsers = async (page = 1, limit = 10, currentUserId, searchQuery = 
   // Build the base query
   const query = {
     role: { $ne: 'admin' },
+    _id: { $ne: currentUserId }, // Exclude the current user
   };
 
   // If a search query exists, add $or conditions
