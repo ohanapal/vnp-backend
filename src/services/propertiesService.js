@@ -1,6 +1,7 @@
 const sheetDataModel = require('../models/sheetDataModel');
 const portfolioModel = require('../models/portfolioModel');
 const subPortfolioModel = require('../models/subPortfolioModel'); // Import the SubPortfolio model
+const propertyModel = require('../models/propertyModel'); // Assuming this is your property model
 
 const getPortfolioSheetData = async ({ page, limit, search, sortBy, sortOrder, filters, role, connectedEntityIds }) => {
   try {
@@ -9,7 +10,6 @@ const getPortfolioSheetData = async ({ page, limit, search, sortBy, sortOrder, f
     // Build the query
     const query = {};
     // console.log('connectedEntityIds:', connectedEntityIds);
-
 
     // Admin role can view all data without restriction
     if (role === 'admin') {
@@ -97,6 +97,124 @@ const getPortfolioSheetData = async ({ page, limit, search, sortBy, sortOrder, f
   }
 };
 
+const updateSheetDataService = async (id, data, role, connectedEntityIds) => {
+  // Find the sheet data by ID
+  const sheetData = await sheetDataModel.findById(id);
+  if (!sheetData) {
+    throw new Error('Sheet data not found');
+  }
+
+  // Admin can update any sheet data
+  if (role === 'admin') {
+    return await sheetDataModel.findByIdAndUpdate(id, data, { new: true });
+  } else {
+    // Non-admin roles should only be able to update based on connectedEntityIds
+    if (
+      (role === 'portfolio' && connectedEntityIds.includes(sheetData.portfolio_name.toString())) ||
+      (role === 'sub-portfolio' && connectedEntityIds.includes(sheetData.sub_portfolio.toString())) ||
+      (role === 'property' && connectedEntityIds.includes(sheetData.property_name.toString()))
+    ) {
+      // Handle portfolio_name field - check if it exists, else create
+      // if (data.portfolio_name) {
+      //   let portfolio = await portfolioModel.findOne({ name: data.portfolio_name });
+      //   if (!portfolio) {
+      //     portfolio = new portfolioModel({ name: data.portfolio_name });
+      //     await portfolio.save();
+      //   }
+      //   data.portfolio_name = portfolio._id; // Use the ID in the sheet data
+      // }
+
+      // // Handle sub_portfolio field - check if it exists, else create
+      // if (data.sub_portfolio) {
+      //   let subPortfolio = await subPortfolioModel.findOne({ name: data.sub_portfolio });
+      //   if (!subPortfolio) {
+      //     subPortfolio = new subPortfolioModel({ name: data.sub_portfolio });
+      //     await subPortfolio.save();
+      //   }
+      //   data.sub_portfolio = subPortfolio._id; // Use the ID in the sheet data
+      // }
+
+      // // Handle property_name field - check if it exists, else create
+      // if (data.property_name) {
+      //   let property = await propertyModel.findOne({ name: data.property_name });
+      //   if (!property) {
+      //     property = new propertyModel({ name: data.property_name });
+      //     await property.save();
+      //   }
+      //   data.property_name = property._id; // Use the ID in the sheet data
+      // }
+
+      // Restrict all users (admin and non-admin) from changing portfolio_name, sub_portfolio, and property_name
+      if (data.portfolio_name || data.sub_portfolio || data.property_name) {
+        throw new Error('Those field are restricted for update:- portfolio_name, sub_portfolio, or property_name');
+      }
+
+      // Update the sheet data with the modified data
+      return await sheetDataModel.findByIdAndUpdate(id, data, { new: true });
+    } else {
+      throw new Error('You are not authorized to update this data');
+    }
+  }
+};
+
+const deleteSheetDataService = async (id, role, connectedEntityIds) => {
+  // const { role, connectedEntityIds } = user;
+
+  // Find the sheet data by ID
+  const sheetData = await sheetDataModel.findById(id);
+  if (!sheetData) {
+    throw new Error('Sheet data not found');
+  }
+
+  // Admin can delete any sheet data
+  if (role === 'admin') {
+    await sheetDataModel.findByIdAndDelete(id);
+    return 'Sheet data deleted successfully';
+  } else {
+    // Non-admin roles should only be able to delete based on connectedEntityIds
+    if (
+      (role === 'portfolio' && connectedEntityIds?.includes(sheetData.portfolio_name.toString())) ||
+      (role === 'sub-portfolio' && connectedEntityIds?.includes(sheetData.sub_portfolio.toString())) ||
+      (role === 'property' && connectedEntityIds?.includes(sheetData.property_name.toString()))
+    ) {
+      await sheetDataModel.findByIdAndDelete(id);
+      return 'Sheet data deleted successfully';
+    } else {
+      throw new Error('You are not authorized to delete this data');
+    }
+  }
+};
+
+const getSingleSheetDataService = async (id, role, connectedEntityIds) => {
+  const sheetData = await sheetDataModel.findById(id).populate('portfolio_name sub_portfolio property_name');
+
+  // console.log('connectedEntityIds:', connectedEntityIds);
+  // console.log('role:', role);
+
+  if (!sheetData) {
+    throw new Error('Sheet data not found');
+  }
+
+  // Admin can access any sheet data
+  if (role === 'admin') {
+    return sheetData;
+  }
+
+  // Non-admin roles should only be able to access data based on connectedEntityIds
+  if (
+    (role === 'portfolio' && connectedEntityIds?.includes(sheetData.portfolio_name._id.toString())) ||
+    (role === 'sub-portfolio' && connectedEntityIds?.includes(sheetData.sub_portfolio._id.toString())) ||
+    (role === 'property' && connectedEntityIds?.includes(sheetData.property_name._id.toString()))
+  ) {
+    return sheetData;
+  } else {
+    throw new Error('You are not authorized to access this data');
+  }
+};
+
 module.exports = {
   getPortfolioSheetData,
+  updateSheetDataService,
+  deleteSheetDataService,
+  getSingleSheetDataService,
 };
