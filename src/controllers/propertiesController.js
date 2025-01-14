@@ -14,14 +14,19 @@ const sheetDataController = async (req, res) => {
       search = '',
       sortBy = 'createdAt',
       sortOrder = 'desc',
+      portfolio,
       sub_portfolio,
       posting_type,
     } = req.query;
+    // console.log('query', req.query);
 
     // Build the filters object
     const filters = {};
     if (sub_portfolio) filters.sub_portfolio = sub_portfolio;
     if (posting_type) filters.posting_type = posting_type;
+    if (portfolio) filters.portfolio = portfolio;
+
+
 
     const result = await getPortfolioSheetData({
       page: parseInt(page, 10),

@@ -3,6 +3,7 @@ const portfolioModel = require('../models/portfolioModel');
 const subPortfolioModel = require('../models/subPortfolioModel'); // Import the SubPortfolio model
 const propertyModel = require('../models/propertyModel'); // Assuming this is your property model
 const AppError = require('../utils/appError');
+const { ObjectId } = require('mongodb');
 
 const getPortfolioSheetData = async ({ page, limit, search, sortBy, sortOrder, filters, role, connectedEntityIds }) => {
   try {
@@ -16,18 +17,29 @@ const getPortfolioSheetData = async ({ page, limit, search, sortBy, sortOrder, f
     if (role === 'admin') {
       // Admin can search by portfolio name
       if (search) {
-        const matchingPortfolios = await portfolioModel.find({ name: { $regex: search, $options: 'i' } });
-        const matchingPortfolioIds = matchingPortfolios.map((portfolio) => portfolio._id);
-        query.portfolio_name = { $in: matchingPortfolioIds };
+        const matchingProperty = await propertyModel.find({ name: { $regex: search, $options: 'i' } });
+        const matchingPropertiesIds = matchingProperty.map((property) => property._id);
+        query.property_name = { $in: matchingPropertiesIds };
       }
 
-      // Admin can apply sub_portfolio filter
+      // apply sub_portfolio filter
       if (filters?.sub_portfolio) {
-        const matchingSubPortfolio = await subPortfolioModel.findOne({ name: filters.sub_portfolio });
-        if (matchingSubPortfolio) {
-          query.sub_portfolio = matchingSubPortfolio._id;
-        } else {
-          throw new Error(`SubPortfolio with name '${filters.sub_portfolio}' not found.`);
+        try {
+          query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
+        } catch (error) {
+          console.error('Error fetching portfolio:', error);
+          throw new AppError(error.message);
+        }
+      }
+
+      // apply portfolio filter
+      if (filters?.portfolio) {
+        try {
+          // console.log('filters.portfolio:', filters.portfolio);
+          query.portfolio_name = new ObjectId(filters?.portfolio);
+        } catch (error) {
+          console.error('Error fetching portfolio:', error.message);
+          throw new AppError(error); // Ensure proper error handling
         }
       }
 
@@ -35,6 +47,7 @@ const getPortfolioSheetData = async ({ page, limit, search, sortBy, sortOrder, f
       if (filters?.posting_type) {
         query.posting_type = filters.posting_type;
       }
+      console.log('query', query);
     } else {
       // Non-admin roles should filter based on connectedEntityIds
 
@@ -51,18 +64,29 @@ const getPortfolioSheetData = async ({ page, limit, search, sortBy, sortOrder, f
 
       // Apply search filter if provided (for non-admin roles)
       if (search) {
-        const matchingPortfolios = await portfolioModel.find({ name: { $regex: search, $options: 'i' } });
-        const matchingPortfolioIds = matchingPortfolios.map((portfolio) => portfolio._id);
-        query.portfolio_name = { $in: matchingPortfolioIds };
+        const matchingProperrty = await propertyModel.find({ name: { $regex: search, $options: 'i' } });
+        const matchingPropertiesIds = matchingProperrty.map((property) => property._id);
+        query.property_name = { $in: matchingPropertiesIds };
       }
 
       // Apply other filters (sub_portfolio, posting_type)
       if (filters?.sub_portfolio) {
-        const matchingSubPortfolio = await subPortfolioModel.findOne({ name: filters.sub_portfolio });
-        if (matchingSubPortfolio) {
-          query.sub_portfolio = matchingSubPortfolio._id;
-        } else {
-          throw new Error(`SubPortfolio with name '${filters.sub_portfolio}' not found.`);
+        try {
+          query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
+        } catch (error) {
+          console.error('Error fetching portfolio:', error);
+          throw new AppError(error.message);
+        }
+      }
+
+      // apply portfolio filter
+      if (filters?.portfolio) {
+        try {
+          // console.log('filters.portfolio:', filters.portfolio);
+          query.portfolio_name = new ObjectId(filters?.portfolio);
+        } catch (error) {
+          console.error('Error fetching portfolio:', error.message);
+          throw new AppError(error); // Ensure proper error handling
         }
       }
 
