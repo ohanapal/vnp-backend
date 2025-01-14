@@ -11,28 +11,21 @@ const {
   inviteUser,
   verifyUserInvitation,
   resetPassword,
+  updateOwnProfile,
 } = require('../controllers/userController');
 const { authMiddleware } = require('../middlewares/authMiddleware');
-const { checkPermission } = require('../middlewares/rbacMiddleware');
-
 // Route for creating a new user and getting all users
 router.route('/admin-register').post(registerAdmin);
 router.route('/login').post(loginUser);
 router.route('/invite-user').post(authMiddleware('admin'), inviteUser);
 router.route('/verify-user').post(verifyUserInvitation);
 router.route('/reset-password').post(resetPassword);
-router.route('/').get(authMiddleware('admin', 'portfolio','sub-portfolio', 'property'), getAllUsers);
+// router.get(authMiddleware('admin', 'portfolio', 'sub-portfolio', 'property'), getAllUsers);
+router.get('/', authMiddleware('admin', 'sub-portfolio', 'portfolio', 'property'), getAllUsers);
 
-// Route for getting, updating, and deleting a user by ID
-router
-  .route('/:id')
-  .put(
-    authMiddleware('admin'), // Example: Only admins and managers can update users
-    updateUser,
-  )
-  .delete(
-    authMiddleware('admin'), // Example: Only admins can delete users
-    deleteUser,
-  );
+router.put('/update/:id', authMiddleware('admin'), updateUser); //Only admins and managers can update users
+router.delete('/delete/:id', authMiddleware('admin'), deleteUser); //Only admins and managers can update users
+
+router.put('/own-profile', authMiddleware('admin', 'portfolio', 'sub-portfolio', 'property'), updateOwnProfile);
 
 module.exports = router;

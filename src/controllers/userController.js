@@ -101,3 +101,19 @@ exports.deleteUser = async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 };
+
+exports.updateOwnProfile = async (req, res) => {
+  try {
+    const userId = req.user.id; // Assuming the user's ID is stored in req.user by an authentication middleware
+    const updatedData = req.body; // Profile data to be updated
+    // Call the service to update the profile
+    const updatedUser = await userService.updateOwnProfile(userId, updatedData);
+
+    res.status(200).json({
+      message: 'Profile updated successfully',
+      user: updatedUser,
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};

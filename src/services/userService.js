@@ -190,7 +190,7 @@ exports.getAllUsers = async (page = 1, limit = 10, currentUserId, searchQuery = 
   // Build the base query
   const query = {
     role: { $ne: 'admin' },
-    _id: { $ne: currentUserId }, // Exclude the current user
+    // _id: { $ne: currentUserId }, // Exclude the current user
   };
 
   // If a search query exists, add $or conditions
@@ -223,6 +223,10 @@ exports.getAllUsers = async (page = 1, limit = 10, currentUserId, searchQuery = 
       }
       // Convert connected_entity_id array of objects to an array of names
       user.connected_entity_id = user.connected_entity_id.map((entity) => entity.name);
+
+      // Remove password field from the user object
+      delete user.password;
+
       return user;
     }),
   );
@@ -235,10 +239,53 @@ exports.getAllUsers = async (page = 1, limit = 10, currentUserId, searchQuery = 
   };
 };
 
+// Update User
 exports.updateUser = async (userId, updateData) => {
-  return await User.findByIdAndUpdate(userId, updateData, { new: true });
+  // Update the user in the database
+  const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true });
+
+  // If user exists, remove the password field before returning
+  if (updatedUser) {
+    delete updatedUser.password;
+  }
+
+  return updatedUser;
 };
 
+// Delete User
 exports.deleteUser = async (userId) => {
-  return await User.findByIdAndDelete(userId);
+  // Find and delete the user by ID
+  const deletedUser = await User.findByIdAndDelete(userId);
+
+  // If user exists, remove the password field before returning (though it's deleted, we exclude it just in case)
+  if (deletedUser) {
+    delete deletedUser.password;
+  }
+
+  return deletedUser;
+};
+
+exports.updateOwnProfile = async (userId, updatedData) => {
+  // Fetch the user by ID
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Merge the updates while excluding sensitive fields
+  const sensitiveFields = ['password', 'role', '_id', 'createdAt', 'updatedAt', '__v'];
+  Object.keys(updatedData).forEach((key) => {
+    if (!sensitiveFields.includes(key)) {
+      user[key] = updatedData[key];
+    }
+  });
+
+  // Save the updated user document
+  await user.save();
+
+  // Exclude the password field from the response
+  const userResponse = user.toObject(); // Convert user document to a plain object
+  delete userResponse.password; // Delete the password field
+
+  return userResponse;
 };

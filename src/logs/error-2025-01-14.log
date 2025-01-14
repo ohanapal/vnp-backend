@@ -3,3 +3,16 @@
 2025-01-14 15:25:47 [[31merror[39m]: Can't find /api/properties/get-single/677f99f3c6618c7d08093f0d on this server {"statusCode":404,"status":"fail","isOperational":true}
 2025-01-14 15:25:48 [[31merror[39m]: Can't find /api/properties/get-single/677f99f3c6618c7d08093f0d on this server {"statusCode":404,"status":"fail","isOperational":true}
 2025-01-14 15:26:13 [[31merror[39m]: Can't find /api/properties/get-single/677f99f3c6618c7d08093f12 on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-01-14 20:35:31 [[31merror[39m]: You are not permitted! {"statusCode":403,"status":"fail","isOperational":true}
+2025-01-14 20:36:28 [[31merror[39m]: You are not permitted! {"statusCode":403,"status":"fail","isOperational":true}
+2025-01-14 20:36:57 [[31merror[39m]: You are not permitted! {"statusCode":403,"status":"fail","isOperational":true}
+2025-01-14 20:38:11 [[31merror[39m]: You are not permitted! {"statusCode":403,"status":"fail","isOperational":true}
+2025-01-14 20:39:03 [[31merror[39m]: You are not permitted! {"statusCode":403,"status":"fail","isOperational":true}
+2025-01-14 20:39:49 [[31merror[39m]: You are not permitted! {"statusCode":403,"status":"fail","isOperational":true}
+2025-01-14 20:42:24 [[31merror[39m]: You are not permitted! {"statusCode":403,"status":"fail","isOperational":true}
+2025-01-14 20:43:20 [[31merror[39m]: You are not permitted! {"statusCode":403,"status":"fail","isOperational":true}
+2025-01-14 20:43:50 [[31merror[39m]: Can't find /api/users?page=1&limit=5&search=ahad on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-01-14 20:45:01 [[31merror[39m]: You are not permitted! {"statusCode":403,"status":"fail","isOperational":true}
+2025-01-14 20:46:13 [[31merror[39m]: You are not permitted! {"statusCode":403,"status":"fail","isOperational":true}
+2025-01-14 20:53:30 [[31merror[39m]: You are not permitted! {"statusCode":403,"status":"fail","isOperational":true}
+2025-01-14 20:57:03 [[31merror[39m]: You are not permitted! {"statusCode":403,"status":"fail","isOperational":true}
