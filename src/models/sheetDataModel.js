@@ -40,6 +40,13 @@ const sheetDataSchema = new mongoose.Schema(
   },
 );
 
+sheetDataSchema.index({ 'expedia.amount_collectable': 1 }); // Index on expedia.amount_collectable
+sheetDataSchema.index({ 'expedia.amount_confirmed': 1 }); // Index on expedia.amount_confirmed
+sheetDataSchema.index({ 'booking.amount_collectable': 1 }); // Index on booking.amount_collectable
+sheetDataSchema.index({ 'booking.amount_confirmed': 1 }); // Index on booking.amount_confirmed
+sheetDataSchema.index({ 'agoda.amount_collectable': 1 }); // Index on agoda.amount_collectable
+sheetDataSchema.index({ 'agoda.amount_confirmed': 1 });
+
 const sheetData = mongoose.model('sheetData', sheetDataSchema);
 
 module.exports = sheetData;

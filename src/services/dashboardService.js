@@ -7,109 +7,6 @@ const parseCurrency = (value) => {
   return isNaN(parsedValue) ? 0 : parsedValue;
 };
 
-const calculatePercentageChange = (current, previous) => {
-  if (previous === 0) return 0;
-  return ((current - previous) / previous) * 100;
-};
-
-// const getRevenueMetrics = async (role, connectedEntityIds) => {
-//   const data = await SheetData.find({}).populate('portfolio_name').populate('property_name').sort({ from: 1 });
-//   console.log('Data fetched:', data.length);
-
-//   let expediaTotal = 0;
-//   let expediaCollected = 0;
-//   let bookingTotal = 0;
-//   let bookingCollected = 0;
-//   let agodaTotal = 0;
-//   let agodaCollected = 0;
-
-//   const monthlyData = {};
-
-//   data.forEach((item) => {
-//     expediaTotal += parseCurrency(item.expedia?.amount_collectable);
-//     expediaCollected += parseCurrency(item.expedia?.amount_confirmed);
-//     bookingTotal += parseCurrency(item.booking?.amount_collectable);
-//     bookingCollected += parseCurrency(item.booking?.amount_confirmed);
-//     agodaTotal += parseCurrency(item.agoda?.amount_collectable);
-//     agodaCollected += parseCurrency(item.agoda?.amount_confirmed);
-
-//     const date = new Date(item.from);
-//     // console.log('Date:', date);
-//     const monthKey = date.toLocaleString('default', { month: 'long' });
-//     // console.log('Month:', monthKey);
-//     if (!monthlyData[monthKey]) {
-//       monthlyData[monthKey] = {
-//         audited: 0,
-//         remaining: 0,
-//         collected: 0,
-//       };
-//     }
-
-//     const monthlyExpediaAudited = parseCurrency(item.expedia?.amount_collectable);
-//     const monthlyExpediaCollected = parseCurrency(item.expedia?.amount_confirmed);
-//     const monthlyBookingAudited = parseCurrency(item.booking?.amount_collectable);
-//     const monthlyBookingCollected = parseCurrency(item.booking?.amount_confirmed);
-//     const monthlyAgodaAudited = parseCurrency(item.agoda?.amount_collectable);
-//     const monthlyAgodaCollected = parseCurrency(item.agoda?.amount_confirmed);
-
-//     monthlyData[monthKey].audited += monthlyExpediaAudited + monthlyBookingAudited + monthlyAgodaAudited;
-//     monthlyData[monthKey].collected += monthlyExpediaCollected + monthlyBookingCollected + monthlyAgodaCollected;
-//     monthlyData[monthKey].remaining +=
-//       monthlyExpediaAudited +
-//       monthlyBookingAudited +
-//       monthlyAgodaAudited -
-//       (monthlyExpediaCollected + monthlyBookingCollected + monthlyAgodaCollected);
-//   });
-
-//   const total = expediaTotal + bookingTotal + agodaTotal;
-//   const collected = expediaCollected + bookingCollected + agodaCollected;
-//   const remaining = total - collected;
-
-//   const previousMonth = {
-//     total: total * 0.9,
-//     collected: collected * 0.9,
-//     remaining: remaining * 0.9,
-//   };
-
-//   const chartData = Object.entries(monthlyData).map(([month, values]) => ({
-//     month,
-//     audited: Math.round(values.audited),
-//     remaining: Math.round(values.remaining),
-//     collected: Math.round(values.collected),
-//   }));
-
-//   return {
-//     metrics: {
-//       total,
-//       collected,
-//       remaining,
-//       changes: {
-//         totalChange: calculatePercentageChange(total, previousMonth.total),
-//         collectedChange: calculatePercentageChange(collected, previousMonth.collected),
-//         remainingChange: calculatePercentageChange(remaining, previousMonth.remaining),
-//       },
-//     },
-//     trend: chartData,
-//     breakdown: {
-//       expedia: {
-//         total: expediaTotal,
-//         collected: expediaCollected,
-//         remaining: expediaTotal - expediaCollected,
-//       },
-//       booking: {
-//         total: bookingTotal,
-//         collected: bookingCollected,
-//         remaining: bookingTotal - bookingCollected,
-//       },
-//       agoda: {
-//         total: agodaTotal,
-//         collected: agodaCollected,
-//         remaining: agodaTotal - agodaCollected,
-//       },
-//     },
-//   };
-// };
-
 const getRevenueMetrics = async (role, connectedEntityIds, startDate, endDate, propertyName) => {
   // Fetch and populate data
   const query = {};
@@ -315,4 +212,358 @@ const getStatusDistribution = async (role, connectedEntityIds, startDate, endDat
   }
 };
 
-module.exports = { getRevenueMetrics, getStatusDistribution };
+const formatCurrency = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+
+const getOTAPerformance = async (role, connectedEntityIds, startDate, endDate) => {
+  const filter = {};
+
+  // If date range is provided, filter the data based on the date range
+  if (startDate && endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999); // Set the end time to the end of the day
+    filter.from = { $gte: start, $lte: end }; // Filter for the specified date range
+  }
+
+  // Add role-based filtering
+  if (role === 'portfolio') {
+    // Filter for portfolio data (assuming `portfolioId` is part of your data)
+    filter.portfolio_name = { $in: connectedEntityIds };
+  } else if (role === 'sub-portfolio') {
+    // Filter for sub-portfolio data (assuming `subPortfolioId` is part of your data)
+    filter.sub_portfolio = { $in: connectedEntityIds };
+  } else if (role === 'property') {
+    // Filter for property data (assuming `propertyId` is part of your data)
+    filter.property_name = { $in: connectedEntityIds };
+  }
+
+  // Fetch only necessary fields to reduce query time
+  const data = await SheetData.find(filter, {
+    'property_name.name': 1,
+    'expedia.amount_collectable': 1,
+    'expedia.amount_confirmed': 1,
+    'booking.amount_collectable': 1,
+    'booking.amount_confirmed': 1,
+    'agoda.amount_collectable': 1,
+    'agoda.amount_confirmed': 1,
+  }).lean();
+
+  // console.log('Data fetched:', data);
+  // Helper function to clean and convert amount fields
+  const parseAmount = (value) => {
+    if (!value) return 0;
+    const cleanedValue = value.trim().replace(/[^0-9.-]+/g, '');
+    const parsedValue = parseFloat(cleanedValue);
+    return isNaN(parsedValue) ? 0 : parsedValue;
+  };
+
+  // Initialize metrics objects
+  const initialMetrics = {
+    otaMetrics: {
+      Expedia: { reportedAmount: 0, claimedAmount: 0 },
+      'Booking.com': { reportedAmount: 0, claimedAmount: 0 },
+      Agoda: { reportedAmount: 0, claimedAmount: 0 },
+    },
+    propertyMetrics: {},
+  };
+  // console.log('initialMetrics', initialMetrics);
+
+  // Use reduce to accumulate the results
+  const { otaMetrics } = data.reduce((acc, item) => {
+    const { property_name, expedia, booking, agoda, portfolio_name, sub_portfolio } = item;
+    // console.log('item 1 ====>>>>>>>>>>>>>>>>>>', item);
+    const propertyName = property_name?.name || 'Unknown Property';
+
+    // Initialize property metrics if not already initialized
+    if (!acc.propertyMetrics[propertyName]) {
+      acc.propertyMetrics[propertyName] = { reportedAmount: 0, claimedAmount: 0 };
+    }
+
+    // // Check if this item matches the role's connectedEntityIds
+    // if (role === 'portfolio' && !connectedEntityIds.includes(portfolio_name)) return acc;
+    // if (role === 'sub-portfolio' && !connectedEntityIds.includes(sub_portfolio)) return acc;
+    // if (role === 'property' && !connectedEntityIds.includes(property_name)) return acc;
+
+    // console.log("item two=====>>>>>>>>", item)
+    // Process Expedia data
+    const expediaReported = parseAmount(expedia?.amount_collectable);
+    // console.log('expediaReported', expediaReported);
+    const expediaClaimed = parseAmount(expedia?.amount_confirmed);
+    acc.otaMetrics.Expedia.reportedAmount += expediaReported;
+    acc.otaMetrics.Expedia.claimedAmount += expediaClaimed;
+
+    // Process Booking.com data
+    const bookingReported = parseAmount(booking?.amount_collectable);
+    const bookingClaimed = parseAmount(booking?.amount_confirmed);
+    acc.otaMetrics['Booking.com'].reportedAmount += bookingReported;
+    acc.otaMetrics['Booking.com'].claimedAmount += bookingClaimed;
+
+    // Process Agoda data
+    const agodaReported = parseAmount(agoda?.amount_collectable);
+    const agodaClaimed = parseAmount(agoda?.amount_confirmed);
+    acc.otaMetrics.Agoda.reportedAmount += agodaReported;
+    acc.otaMetrics.Agoda.claimedAmount += agodaClaimed;
+
+    // Add to property totals
+    acc.propertyMetrics[propertyName].reportedAmount += expediaReported + bookingReported + agodaReported;
+    acc.propertyMetrics[propertyName].claimedAmount += expediaClaimed + bookingClaimed + agodaClaimed;
+
+    return acc;
+  }, initialMetrics);
+
+  // Format OTA data for the response
+  const otaData = Object.entries(otaMetrics).map(([platform, metrics]) => ({
+    platform,
+    amountCollectable: metrics.reportedAmount.toFixed(2),
+    amountConfirmed: metrics.claimedAmount.toFixed(2),
+  }));
+
+  return { otaData };
+};
+
+// const getPropertyPerformance = async (role, connectedEntityIds, startDate, endDate) => {
+//   const filter = {};
+
+//   // console.log('Received parameters:', { role, connectedEntityIds, startDate, endDate });
+
+//   // If date range is provided, filter the data based on the date range
+//   if (startDate && endDate) {
+//     const start = new Date(startDate);
+//     const end = new Date(endDate);
+//     end.setHours(23, 59, 59, 999); // Set the end time to the end of the day
+//     filter.from = { $gte: start, $lte: end };
+//     // console.log('Applied date range filter:', filter.from);
+//   }
+
+//   // Apply filters based on role
+//   if (role === 'portfolio') {
+//     filter.portfolio_name = { $in: connectedEntityIds };
+//   } else if (role === 'sub-portfolio') {
+//     filter.sub_portfolio = { $in: connectedEntityIds };
+//   } else if (role === 'property') {
+//     filter.property_name = { $in: connectedEntityIds };
+//   }
+//   // console.log('Final filter applied:', filter);
+//   // return;
+
+//   try {
+//     // Fetch necessary fields only
+//     const data = await SheetData.find(filter, {
+//       property_name: 1,
+//       portfolio_name: 1,
+//       'expedia.amount_collectable': 1,
+//       'expedia.amount_confirmed': 1,
+//       'booking.amount_collectable': 1,
+//       'booking.amount_confirmed': 1,
+//       'agoda.amount_collectable': 1,
+//       'agoda.amount_confirmed': 1,
+//     })
+//       .populate('portfolio_name', 'name')
+//       .populate('property_name', 'name')
+//       .lean();
+
+//     // console.log('Fetched data from database:', data[0]);
+//     // return;
+
+//     // Helper function to clean and parse amounts
+//     const parseAmount = (value) => {
+//       if (!value) return 0;
+//       const cleanedValue = value.trim().replace(/[^0-9.-]+/g, '');
+//       const parsedValue = parseFloat(cleanedValue);
+//       // console.log('Parsed amount:', { original: value, parsed: parsedValue });
+//       return isNaN(parsedValue) ? 0 : parsedValue;
+//     };
+
+//     // Aggregate data for portfolios
+//     const portfolioMetrics = data.reduce((acc, item) => {
+//       const portfolioName = item?.portfolio_name || 'Unknown Portfolio';
+//       const propertyName = item?.property_name?.name || 'Unknown Property';
+
+//       // console.log('Processing item:', { portfolioName, propertyName });
+//       // return;
+
+//       // Initialize portfolio if not present
+//       if (!acc[portfolioName]) {
+//         acc[portfolioName] = {
+//           properties: {},
+//           reportedAmount: 0,
+//           claimedAmount: 0,
+//         };
+//         // console.log('Initialized new portfolio:', portfolioName);
+//       }
+
+//       // Initialize property if not present under the portfolio
+//       if (!acc[portfolioName].properties[propertyName]) {
+//         acc[portfolioName].properties[propertyName] = { reportedAmount: 0, claimedAmount: 0 };
+//         // console.log('Initialized new property:', propertyName);
+//       }
+//       // return;
+
+//       // Aggregate data for the property
+//       acc[portfolioName].properties[propertyName].reportedAmount +=
+//         parseAmount(item.expedia?.amount_collectable) +
+//         parseAmount(item.booking?.amount_collectable) +
+//         parseAmount(item.agoda?.amount_collectable);
+//       acc[portfolioName].properties[propertyName].claimedAmount +=
+//         parseAmount(item.expedia?.amount_confirmed) +
+//         parseAmount(item.booking?.amount_confirmed) +
+//         parseAmount(item.agoda?.amount_confirmed);
+
+//       // console.log('Updated property metrics:', acc[portfolioName].properties[propertyName]);
+//       // return;
+
+//       // Update portfolio-level totals
+//       // acc[portfolioName].reportedAmount += acc[portfolioName].properties[propertyName].reportedAmount;
+//       // acc[portfolioName].claimedAmount += acc[portfolioName].properties[propertyName].claimedAmount;
+
+//       // console.log('Updated portfolio metrics:', acc[portfolioName]);
+
+//       return acc;
+//     }, {});
+
+//     // console.log('Aggregated portfolio metrics:', portfolioMetrics);
+
+//     // Format the response
+//     const portfolioData = Object.entries(portfolioMetrics).map(([portfolioName, metrics]) => ({
+//       // portfolioName,
+//       properties: Object.entries(metrics.properties).map(([propertyName, propertyMetrics]) => ({
+//         propertyName,
+//         amountCollectable: propertyMetrics.reportedAmount.toFixed(2),
+//         amountConfirmed: propertyMetrics.claimedAmount.toFixed(2),
+//       })),
+//       // totalCollectable: metrics.reportedAmount.toFixed(2),
+//       // totalConfirmed: metrics.claimedAmount.toFixed(2),
+//     }));
+
+//     // console.log('Formatted portfolio data:', portfolioData);
+
+//     return portfolioData;
+//   } catch (error) {
+//     console.error('Error while fetching or processing data:', error);
+//     throw error;
+//   }
+// };
+
+const getPropertyPerformance = async (
+  role,
+  connectedEntityIds,
+  startDate,
+  endDate,
+  page = 1,
+  limit = 10,
+  sortBy = 'propertyName',
+  sortOrder = 'asc',
+) => {
+  const filter = {};
+
+  if (startDate && endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999); // Set the end time to the end of the day
+    filter.from = { $gte: start, $lte: end };
+  }
+
+  if (role === 'portfolio') {
+    filter.portfolio_name = { $in: connectedEntityIds };
+  } else if (role === 'sub-portfolio') {
+    filter.sub_portfolio = { $in: connectedEntityIds };
+  } else if (role === 'property') {
+    filter.property_name = { $in: connectedEntityIds };
+  }
+
+  try {
+    const skip = (page - 1) * limit;
+
+    const data = await SheetData.find(filter, {
+      property_name: 1,
+      portfolio_name: 1,
+      'expedia.amount_collectable': 1,
+      'expedia.amount_confirmed': 1,
+      'booking.amount_collectable': 1,
+      'booking.amount_confirmed': 1,
+      'agoda.amount_collectable': 1,
+      'agoda.amount_confirmed': 1,
+    })
+      .populate('portfolio_name', 'name')
+      .populate('property_name', 'name')
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const parseAmount = (value) => {
+      if (!value) return 0;
+      const cleanedValue = value.trim().replace(/[^0-9.-]+/g, '');
+      const parsedValue = parseFloat(cleanedValue);
+      return isNaN(parsedValue) ? 0 : parsedValue;
+    };
+
+    const consolidatedData = data.reduce(
+      (acc, item) => {
+        const propertyName = item?.property_name?.name || 'Unknown Property';
+
+        const reportedAmount =
+          parseAmount(item.expedia?.amount_collectable) +
+          parseAmount(item.booking?.amount_collectable) +
+          parseAmount(item.agoda?.amount_collectable);
+
+        const claimedAmount =
+          parseAmount(item.expedia?.amount_confirmed) +
+          parseAmount(item.booking?.amount_confirmed) +
+          parseAmount(item.agoda?.amount_confirmed);
+
+        acc.properties.push({
+          propertyName,
+          amountCollectable: reportedAmount.toFixed(2),
+          amountConfirmed: claimedAmount.toFixed(2),
+        });
+
+        acc.totalCollectable += reportedAmount;
+        acc.totalConfirmed += claimedAmount;
+
+        return acc;
+      },
+      {
+        properties: [],
+        totalCollectable: 0,
+        totalConfirmed: 0,
+      },
+    );
+
+    // Round the totals to 2 decimal places
+    consolidatedData.totalCollectable = consolidatedData.totalCollectable.toFixed(2);
+    consolidatedData.totalConfirmed = consolidatedData.totalConfirmed.toFixed(2);
+
+    // Sort properties
+    const sortMultiplier = sortOrder === 'desc' ? -1 : 1;
+    consolidatedData.properties.sort((a, b) => {
+      if (sortBy === 'propertyName') {
+        return a.propertyName.localeCompare(b.propertyName) * sortMultiplier;
+      } else if (sortBy === 'amountCollectable') {
+        return (parseFloat(a.amountCollectable) - parseFloat(b.amountCollectable)) * sortMultiplier;
+      } else if (sortBy === 'amountConfirmed') {
+        return (parseFloat(a.amountConfirmed) - parseFloat(b.amountConfirmed)) * sortMultiplier;
+      }
+      return 0;
+    });
+
+    // Add pagination metadata
+    const totalCount = await SheetData.countDocuments(filter);
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return {
+      ...consolidatedData,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        pageSize: limit,
+        totalCount,
+      },
+    };
+  } catch (error) {
+    console.error('Error while fetching or processing data:', error);
+    throw error;
+  }
+};
+
+
+module.exports = { getRevenueMetrics, getStatusDistribution, getOTAPerformance, getPropertyPerformance };

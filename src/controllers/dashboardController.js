@@ -1,4 +1,9 @@
-const { getRevenueMetrics, getStatusDistribution } = require('../services/dashboardService'); // Adjust the path to your services
+const {
+  getRevenueMetrics,
+  getStatusDistribution,
+  getOTAPerformance,
+  getPropertyPerformance,
+} = require('../services/dashboardService'); // Adjust the path to your services
 
 const revenue = async (req, res) => {
   console.log('Revenue metrics requested');
@@ -26,4 +31,39 @@ const distributionStatus = async (req, res) => {
   }
 };
 
-module.exports = { revenue, distributionStatus };
+const OTAPerformance = async (req, res) => {
+  const { startDate, endDate } = req.query;
+  const { role, connected_entity_id: connectedEntityIds } = req.user;
+
+  try {
+    const { otaData, propertyData } = await getOTAPerformance(role, connectedEntityIds, startDate, endDate);
+    res.json({ otaData, propertyData });
+  } catch (error) {
+    console.error('Error fetching dashboard metrics:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+const propertyPerformance = async (req, res) => {
+  const { startDate, endDate, page, limit, sortBy, sortOrder } = req.query;
+  const { role, connected_entity_id: connectedEntityIds } = req.user;
+
+  try {
+    const propertyData = await getPropertyPerformance(
+      role,
+      connectedEntityIds,
+      startDate,
+      endDate,
+      parseInt(page, 10) || 1,
+      parseInt(limit, 10) || 10,
+      sortBy || 'propertyName', // Default to propertyName
+      sortOrder || 'asc', // Default to ascending order
+    );
+    res.json(propertyData);
+  } catch (error) {
+    console.error('Error fetching property performance metrics:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+module.exports = { revenue, distributionStatus, OTAPerformance, propertyPerformance };
