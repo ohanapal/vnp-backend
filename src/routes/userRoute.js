@@ -17,7 +17,7 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 // Route for creating a new user and getting all users
 router.route('/admin-register').post(registerAdmin);
 router.route('/login').post(loginUser);
-router.route('/invite-user').post(authMiddleware('admin'), inviteUser);
+router.route('/invite-user').post(authMiddleware('admin', 'sub-portfolio', 'portfolio', 'property'), inviteUser);
 router.route('/verify-user').post(verifyUserInvitation);
 router.route('/reset-password').post(resetPassword);
 // router.get(authMiddleware('admin', 'portfolio', 'sub-portfolio', 'property'), getAllUsers);

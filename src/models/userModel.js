@@ -34,6 +34,12 @@ const userSchema = new Schema(
         return this.role !== 'admin'; // If the role is not admin, connected_entity_id is required
       },
     },
+    invited_user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+
     // access:{
     //   type: String,
     //   enum: ['portfolio', 'sub-portfolio', 'property', 'admin'], // Match these with your roles in roles.json

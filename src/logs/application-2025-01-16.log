@@ -1,0 +1,4 @@
+2025-01-16 00:04:59 [[31merror[39m]: Can't find /api/properties on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-01-16 00:05:13 [[31merror[39m]: Can't find /api/properties/portfolios on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-01-16 01:02:29 [[31merror[39m]: You are not permitted! {"statusCode":403,"status":"fail","isOperational":true}
+2025-01-16 01:31:55 [[31merror[39m]: Can't find /api/portfolio/update/67880cdd64e2fcf2df2bccfc on this server {"statusCode":404,"status":"fail","isOperational":true}

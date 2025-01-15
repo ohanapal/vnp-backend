@@ -11,6 +11,7 @@ const AppError = require('../utils/appError');
 const Portfolio = require('../models/portfolioModel'); // Replace with actual path
 const Property = require('../models/propertyModel'); // Replace with actual path
 const SubPortfolio = require('../models/subPortfolioModel');
+const { ObjectId } = require('mongodb');
 exports.createAdmin = async (userData) => {
   const { password, ...otherData } = userData; // Destructure password from other user data
 
@@ -77,9 +78,29 @@ exports.loginUser = async (userData) => {
 
   return { user: userWithoutPassword, accessToken };
 };
-exports.inviteUser = async (userData) => {
-  const { email, role, access, connected_entity_id } = userData;
 
+//invitation validation
+const getAllowedRolesForInviter = (currentUserRole) => {
+  switch (currentUserRole) {
+    case 'admin':
+      return ['portfolio', 'sub-portfolio', 'property']; // Admin can invite all roles
+    case 'portfolio':
+      return ['sub-portfolio', 'property']; // Portfolio can invite sub portfolio and property
+    case 'sub-portfolio':
+      return ['property']; // Sub portfolio can only invite property
+    case 'property':
+      return []; // Property cannot invite anyone
+    default:
+      return []; // Unknown role, no one can be invited
+  }
+};
+exports.inviteUser = async (userData, id, currentUserRole) => {
+  const { name, email, role, connected_entity_id } = userData;
+
+  const allowedRoles = getAllowedRolesForInviter(currentUserRole);
+  if (!allowedRoles.includes(role)) {
+    throw new AppError('You are not authorized to invite this role');
+  }
   // Check if the user already exists based on the email
   const existingUser = await User.findOne({ email: email });
 
@@ -100,10 +121,10 @@ exports.inviteUser = async (userData) => {
   // Create a new user
   const user = new User({
     role,
-    name: 'temp',
+    name: name,
     password: tempPassword,
     email,
-    access,
+    invited_user: id,
     connected_entity_id,
   });
 
@@ -184,14 +205,18 @@ exports.resetPassword = async (userData) => {
   return { user };
 };
 
-exports.getAllUsers = async (page = 1, limit = 10, currentUserId, searchQuery = '') => {
+exports.getAllUsers = async (page = 1, limit = 10, currentUserId, role, searchQuery = '') => {
   const skip = (page - 1) * limit;
 
   // Build the base query
   const query = {
     role: { $ne: 'admin' },
-    // _id: { $ne: currentUserId }, // Exclude the current user
+    _id: { $ne: currentUserId }, // Exclude the current user
   };
+
+  if (role !== 'admin') {
+    query.invited_user = new ObjectId(currentUserId); // Filter users who were invited by the current user
+  }
 
   // If a search query exists, add $or conditions
   if (searchQuery) {

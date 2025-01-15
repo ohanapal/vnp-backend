@@ -17,6 +17,9 @@ const userRoute = require('./src/routes/userRoute');
 const sheetCRUDRoute = require('./src/routes/sheetCRUDRoute');
 const propertiesRoute = require("./src/routes/propertiesRoute")
 const auditRoute = require("./src/routes/auditRoute")
+const portfolioRoute = require('./src/routes/portfolioRoute');
+const subPortfolioRoute = require('./src/routes/subPortfoliosRoute');
+
 const app = express();
 
 // GLOBAL MIDDLEWARES
@@ -71,6 +74,10 @@ app.use('/api/sheet', sheetCRUDRoute);
 app.use('/api/dashboard', analyticsRoute);
 app.use('/api/properties', propertiesRoute);
 app.use('/api/audit', auditRoute);
+app.use('/api/portfolio', portfolioRoute);
+app.use('/api/sub-portfolio', subPortfolioRoute);
+
+
 
 // app.use("/api/v1/users", userRouter);
 // app.use("/api/v1/reviews", reviewRouter);

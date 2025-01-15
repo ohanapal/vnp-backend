@@ -30,9 +30,12 @@ exports.loginUser = async (req, res) => {
 };
 
 exports.inviteUser = async (req, res) => {
-  console.log('req body from ivite User', req.body);
+  // console.log('req body from ivite User', req.body);
+  const { id, role } = req.user;
+  // console.log("id and role", id, role)
+  // return;
   try {
-    const user = await userService.inviteUser(req.body);
+    const user = await userService.inviteUser(req.body, id, role);
     res.status(201).json(user);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -62,8 +65,8 @@ exports.getAllUsers = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const searchQuery = req.query.search || ''; // Extract search query from request
     const currentUserId = req.user.id; // Assuming req.user contains the logged-in user's details
-
-    const result = await userService.getAllUsers(page, limit, currentUserId, searchQuery);
+    const role = req.user.role;
+    const result = await userService.getAllUsers(page, limit, currentUserId,role, searchQuery);
     res.status(200).json(result);
   } catch (error) {
     res.status(400).json({ error: error.message });

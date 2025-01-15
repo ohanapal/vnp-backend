@@ -3,6 +3,10 @@ const {
   deleteSheetDataService,
   updateSheetDataService,
   getSingleSheetDataService,
+  getAllPropertiesName,
+  createProperty,
+  updateProperty,
+  deleteProperty,
 } = require('../services/propertiesService');
 
 const sheetDataController = async (req, res) => {
@@ -25,8 +29,6 @@ const sheetDataController = async (req, res) => {
     if (sub_portfolio) filters.sub_portfolio = sub_portfolio;
     if (posting_type) filters.posting_type = posting_type;
     if (portfolio) filters.portfolio = portfolio;
-
-
 
     const result = await getPortfolioSheetData({
       page: parseInt(page, 10),
@@ -116,9 +118,89 @@ const getSingleSheetData = async (req, res) => {
     }
   }
 };
+
+const getAllProperties = async (req, res) => {
+  const { role, connected_entity_id: connectedEntityIds } = req.user;
+  try {
+    const { search } = req.query;
+    const allPortfolios = await getAllPropertiesName(role, connectedEntityIds, search);
+    return res.status(200).json(allPortfolios);
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const createPropertyController = async (req, res) => {
+  try {
+    const newProperty = await createProperty(req.body);
+
+    return res.status(201).json({
+      success: true,
+      message: 'property created successfully',
+      data: newProperty,
+    });
+  } catch (error) {
+    console.error('Error creating property:', error.message);
+
+    if (error.message === 'Name is required' || error.message === 'property with this name already exists') {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+
+    return res.status(500).json({ success: false, message: message.error });
+  }
+};
+
+const updatePropertyController = async (req, res) => {
+  try {
+    const { id } = req.params; // ID from the URL parameter
+    const { name } = req.body;
+
+    // Call the service to update the property
+    const updatedProperty = await updateProperty(id, name);
+
+    return res.status(200).json({
+      success: true,
+      message: 'property updated successfully',
+      data: updatedProperty,
+    });
+  } catch (error) {
+    console.error('Error updating property:', error.message);
+
+    // Determine error type
+    const statusCode = error.message.includes('not found') ? 404 : 400;
+    return res.status(statusCode).json({ success: false, message: error.message });
+  }
+};
+
+const deletePropertyController = async (req, res) => {
+  try {
+    const { id } = req.params; // ID from the URL parameter
+
+    // Call the service to delete the property
+    const deletedProperty = await deleteProperty(id);
+
+    return res.status(200).json({
+      success: true,
+      message: 'property deleted successfully',
+      data: deletedProperty,
+    });
+  } catch (error) {
+    console.error('Error deleting property:', error.message);
+
+    // Determine error type
+    const statusCode = error.message.includes('not found') ? 404 : 400;
+    return res.status(statusCode).json({ success: false, message: error.message });
+  }
+};
+
+
 module.exports = {
   sheetDataController,
   updateSheetDataController,
   deleteSheetDataController,
   getSingleSheetData,
+  getAllProperties,
+  createPropertyController,
+  deletePropertyController,
+  updatePropertyController,
 };

@@ -237,9 +237,147 @@ const getSingleSheetDataService = async (id, role, connectedEntityIds) => {
   }
 };
 
+const getAllPropertiesName = async (role, connectedEntityIds, search = '') => {
+  try {
+    let query = {};
+    let fieldToMatch = '';
+
+    // Add regex-based search for property_name
+    const searchQuery = search
+      ? { name: { $regex: search, $options: 'i' } } // Case-insensitive regex match
+      : {};
+
+    switch (role) {
+      case 'admin':
+        // If role is admin, fetch all property names
+        const allProperties = await sheetDataModel
+          .find({}, 'property_name') // Fetch only the property_name field
+          .populate({
+            path: 'property_name',
+            select: 'name',
+            match: searchQuery, // Apply regex match
+          });
+
+        return Array.from(
+          new Map(
+            allProperties
+              .filter((item) => item.property_name) // Filter out null results from the regex match
+              .map((item) => [
+                item.property_name._id.toString(), // Use _id as the unique key
+                { _id: item.property_name._id, name: item.property_name.name },
+              ]),
+          ).values(),
+        );
+
+      case 'portfolio':
+        fieldToMatch = 'portfolio_name';
+        break;
+
+      case 'sub-portfolio':
+        fieldToMatch = 'sub_portfolio';
+        break;
+
+      case 'property':
+        fieldToMatch = 'property_name';
+        break;
+
+      default:
+        throw new Error('Invalid role');
+    }
+
+    // Build the query
+    query[fieldToMatch] = { $in: connectedEntityIds };
+
+    // Fetch and populate property names with search applied
+    const matchedData = await sheetDataModel
+      .find(query, 'property_name') // Fetch only the property_name field
+      .populate({
+        path: 'property_name',
+        select: 'name',
+        match: searchQuery, // Apply regex match
+      });
+
+    // Remove duplicates and return unique property names
+    return Array.from(
+      new Map(
+        matchedData
+          .filter((item) => item.property_name) // Filter out null results from the regex match
+          .map((item) => [
+            item.property_name._id.toString(), // Use _id as the unique key
+            { _id: item.property_name._id, name: item.property_name.name },
+          ]),
+      ).values(),
+    );
+  } catch (error) {
+    console.error('Error fetching properties:', error.message);
+    throw error;
+  }
+};
+
+const createProperty = async (data) => {
+  const { name } = data;
+
+  // Validation: Ensure the name is provided
+  if (!name) {
+    throw new AppError('Name is required');
+  }
+
+  // Check if a sub-portfolio with the same name already exists
+  const existingProperty = await propertyModel.findOne({ name });
+  if (existingProperty) {
+    throw new AppError('property with this name already exists');
+  }
+
+  // Create the new sub-portfolio
+  const newProperty = new propertyModel({
+    name,
+  });
+
+  await newProperty.save();
+  return newProperty;
+};
+
+const updateProperty = async (id, name) => {
+  // Validate input
+  if (!name) {
+    throw new AppError('Name is required');
+  }
+
+  // Check if another sub-portfolio with the same name already exists
+  const existingProperty = await propertyModel.findOne({ name });
+  if (existingProperty) {
+    throw new AppError('property with this name already exists');
+  }
+
+  // Find and update the sub-portfolio
+  const updatedProperty = await propertyModel.findByIdAndUpdate(id, { name }, { new: true, runValidators: true });
+
+  if (!updatedProperty) {
+    throw new AppError('property not found');
+  }
+
+  return updatedProperty;
+};
+
+const deleteProperty = async (id) => {
+  // Find and delete the sub-portfolio
+  const deletedProperty = await propertyModel.findByIdAndDelete(id);
+
+  if (!deletedProperty) {
+    throw new Error('property not found');
+  }
+
+  return deletedProperty;
+};
+
+
 module.exports = {
   getPortfolioSheetData,
   updateSheetDataService,
   deleteSheetDataService,
   getSingleSheetDataService,
+  getAllPropertiesName,
+  deleteProperty,
+  updateProperty,
+  createProperty,
 };
