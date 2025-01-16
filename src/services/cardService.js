@@ -213,7 +213,7 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
     const formatToTwoDecimals = (value) => parseFloat(value.toFixed(2));
 
     return {
-      reportedAmounts: {
+      collectableAmounts: {
         expedia: formatToTwoDecimals(totals.ExpediaValue),
         booking: formatToTwoDecimals(totals.BookingValue),
         agoda: formatToTwoDecimals(totals.AgodaValue),
@@ -225,7 +225,7 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
         agoda: formatToTwoDecimals(totals.AgodaConfirmedValue),
         total: formatToTwoDecimals(totalConfirmed),
       },
-      totalBookings: totals.PortfolioCount,
+      totalAudits: totals.PortfolioCount,
     };
   } catch (error) {
     console.error('Error in calculateMetrics:', error);
