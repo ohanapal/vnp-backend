@@ -12,6 +12,8 @@ const Portfolio = require('../models/portfolioModel'); // Replace with actual pa
 const Property = require('../models/propertyModel'); // Replace with actual path
 const SubPortfolio = require('../models/subPortfolioModel');
 const { ObjectId } = require('mongodb');
+const logger = require('../utils/logger'); // Import the logger
+
 exports.createAdmin = async (userData) => {
   const { password, ...otherData } = userData; // Destructure password from other user data
 
@@ -44,26 +46,39 @@ exports.createAdmin = async (userData) => {
 exports.loginUser = async (userData) => {
   const { email, password } = userData;
 
+  // Log the start of the login process
+  logger.debug('Searching for user in database', { email });
+
   // Find the user by email
   const user = await User.findOne({ email });
 
   if (!user) {
-    throw new Error('User not found');
+    logger.warn('User not found', { email });
+    throw new AppError('User not found', 404);
   }
+
   if (!user.is_verified) {
-    throw new Error('User not verified');
+    logger.warn('User not verified', { email });
+    throw new AppError('User not verified', 403);
   }
+
+  // Log password validation process
+  logger.debug('Validating user password', { email });
 
   // Compare the password with the hashed password stored in the database
   const isPasswordValid = await bcrypt.compare(password, user.password);
 
   if (!isPasswordValid) {
-    throw new Error('Invalid password');
+    logger.warn('Invalid password', { email });
+    throw new AppError('Invalid password', 401);
   }
 
   // Remove the password from the user object before returning it
   const userWithoutPassword = user.toObject();
   delete userWithoutPassword.password;
+
+  // Log the JWT generation
+  logger.debug('Generating JWT token', { email, userId: user._id });
 
   // Generate JWT token if password is correct
   const accessToken = jwt.sign(
@@ -75,6 +90,8 @@ exports.loginUser = async (userData) => {
     process.env.SECRET_KEY,
     { expiresIn: process.env.JWT_EXPIRES_IN },
   );
+
+  logger.info('Token generated successfully', { email, userId: user._id });
 
   return { user: userWithoutPassword, accessToken };
 };
@@ -203,6 +220,52 @@ exports.resetPassword = async (userData) => {
   await user.save();
 
   return { user };
+};
+
+exports.sendForgetPasswordOTP = async (userData) => {
+  const { email } = userData;
+
+  // Find the user by email
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    // Log the error
+    logger.error(`User with email ${email} not found`);
+    throw new AppError('User not found', 404); // Throw a custom error with a 404 status code
+  }
+
+  // Generate a temporary password (OTP)
+  const tempPassword = generator.generate({
+    length: 10,
+    numbers: true,
+  });
+
+  // Update the password in the user document
+  user.password = tempPassword;
+
+  // Save the changes to the user document
+  await user.save();
+
+  // Insert the temporary password into the TempPassword collection
+  await TempPassword.create({
+    email: email,
+    password: tempPassword,
+    status: 0, // Set status to 0 (not yet verified)
+  });
+
+  // Send the temporary password via email
+  const emailMessage = `Your Temporary Password is: ${tempPassword}. Please change it after login`;
+  const emailSubject = 'VNP';
+  const emailSend = await SendEmailUtils(email, emailMessage, emailSubject);
+
+  // Log the successful email send
+  // logger.info(`Temporary password sent to ${email}`);
+
+  // Return the result of the email send (or you could return the OTP status)
+  return {
+    message: "Check Your Email for Verification Account OTP",
+    data: user
+  };
 };
 
 exports.getAllUsers = async (page = 1, limit = 10, currentUserId, role, searchQuery = '') => {

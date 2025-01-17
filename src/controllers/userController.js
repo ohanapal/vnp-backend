@@ -2,7 +2,7 @@
 
 const userService = require('../services/userService');
 const AppError = require('../utils/appError');
-
+const logger = require('../utils/logger');
 exports.registerAdmin = async (req, res) => {
   try {
     const user = await userService.createAdmin(req.body);
@@ -12,10 +12,16 @@ exports.registerAdmin = async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 };
-exports.loginUser = async (req, res) => {
+exports.loginUser = async (req, res, next) => {
   try {
+    // Log the login request
+    logger.info('Login request received', { email: req.body.email });
+
     // Call the service to log the user in
     const user = await userService.loginUser(req.body);
+
+    // Log successful login
+    logger.info('Login successful', { userId: user.user._id, email: req.body.email });
 
     // Send back the user and access token
     res.status(200).json({
@@ -24,8 +30,11 @@ exports.loginUser = async (req, res) => {
       accessToken: user.accessToken,
     });
   } catch (error) {
-    // Handle any errors
-    res.status(400).json({ error: error.message });
+    // Log the error
+    logger.error('Login failed', { email: req.body.email, error: error.message });
+
+    // Forward the error to the centralized error handler
+    next(error);
   }
 };
 
@@ -59,6 +68,21 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
+exports.sendForgetPasswordOTP = async (req, res) => {
+  try {
+    const user = await userService.sendForgetPasswordOTP(req.body);
+    logger.info(`OTP successfully sent to ${req.body.email}`);
+    res.status(201).json(user);
+  } catch (error) {
+    // Log the error
+    logger.error(`Failed to send OTP to ${req.body.email}: ${error.message}`);
+
+    // Send a structured error response
+    const err = new AppError(error.message || 'An error occurred while sending OTP', 400);
+    res.status(err.statusCode).json({ error: err.message });
+  }
+};
+
 exports.getAllUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -66,7 +90,7 @@ exports.getAllUsers = async (req, res) => {
     const searchQuery = req.query.search || ''; // Extract search query from request
     const currentUserId = req.user.id; // Assuming req.user contains the logged-in user's details
     const role = req.user.role;
-    const result = await userService.getAllUsers(page, limit, currentUserId,role, searchQuery);
+    const result = await userService.getAllUsers(page, limit, currentUserId, role, searchQuery);
     res.status(200).json(result);
   } catch (error) {
     res.status(400).json({ error: error.message });

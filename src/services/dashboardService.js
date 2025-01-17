@@ -179,26 +179,36 @@ const getStatusDistribution = async (role, connectedEntityIds, startDate, endDat
 
     // Define color mapping for different statuses
     const colorMap = {
-      NoReviewRequired: '#0e7aff',
-      NothingToReport: '#ffcc00',
-      Invoiced: '#ff6600',
-      AccessRequired: '#ff3300',
-      WorkManagement: '#33cc33',
-      OTAPostCompleted: '#3399ff',
-      ReportedToProperty: '#9933ff',
-      Batch12102024: '#ff3399',
-      JobAssigned: '#ff9933',
+      accessrequired: '#FF5733',
+      approvalrequired: '#FFC300',
+      otapost: '#34495E',
+      otapostcompleted: '#2ECC71',
+      invoiced: '#E74C3C',
+      jobassigned: '#2980B9',
+      noreviewrequired: '#7F8C8D',
+      nothingtoreport: '#95A5A6',
+      reportedtoproperty: '#5DADE2',
+      refundrequired: '#9B59B6',
+      hold: '#F39C12',
+      ebs: '#27AE60',
+      'ebs/jobassigned': '#1ABC9C',
+      readytobeinvoiced: '#F1C40F',
+      'otapost/accesslost': '#C0392B',
+      clientconsole: '#8E44AD',
     };
 
     // Convert map to array and format for frontend
-    const formattedData = Array.from(statusCountMap.entries()).map(([status, count]) => ({
-      status,
-      count,
-      fill: colorMap[status] || '#808080', // Default gray color if status not in colorMap
-    }));
+    const formattedData = Array.from(statusCountMap.entries()).map(([status, count]) => {
+      // If status contains "batch," use the batch color
+      const isBatch = status.startsWith('batch');
+      return {
+        status,
+        count,
+        fill: isBatch ? '#3498DB' : colorMap[status] || '#808080', // Default gray color if status not in colorMap
+      };
+    });
 
     // Calculate total based on the filtered data
-    // const total = formattedData.reduce((acc, curr) => acc + curr.count, 0);
     const total = filteredData.length;
 
     // Return the formatted data and total
@@ -564,6 +574,5 @@ const getPropertyPerformance = async (
     throw error;
   }
 };
-
 
 module.exports = { getRevenueMetrics, getStatusDistribution, getOTAPerformance, getPropertyPerformance };

@@ -12,6 +12,7 @@ const {
   verifyUserInvitation,
   resetPassword,
   updateOwnProfile,
+  sendForgetPasswordOTP,
 } = require('../controllers/userController');
 const { authMiddleware } = require('../middlewares/authMiddleware');
 // Route for creating a new user and getting all users
@@ -22,6 +23,8 @@ router.route('/verify-user').post(verifyUserInvitation);
 router.route('/reset-password').post(resetPassword);
 // router.get(authMiddleware('admin', 'portfolio', 'sub-portfolio', 'property'), getAllUsers);
 router.get('/', authMiddleware('admin', 'sub-portfolio', 'portfolio', 'property'), getAllUsers);
+
+router.post('/forgot-password-otp', sendForgetPasswordOTP);
 
 router.put('/update/:id', authMiddleware('admin'), updateUser); //Only admins and managers can update users
 router.delete('/delete/:id', authMiddleware('admin'), deleteUser); //Only admins and managers can update users
