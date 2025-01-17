@@ -17,7 +17,6 @@ const getRevenueMetrics = async (role, connectedEntityIds, startDate, endDate, p
   }
 
   const data = await SheetData.find(query).populate('portfolio_name').populate('property_name').sort({ from: 1 });
-  console.log('Data fetched:', data.length);
 
   // Filter data based on role and connectedEntityIds or propertyName
   const filteredData = data.filter((item) => {
@@ -37,89 +36,66 @@ const getRevenueMetrics = async (role, connectedEntityIds, startDate, endDate, p
     }
   });
 
-  console.log('Filtered Data:', filteredData.length);
-
   // Initialize totals
-  let expediaTotal = 0;
-  let expediaCollected = 0;
-  let bookingTotal = 0;
-  let bookingCollected = 0;
-  let agodaTotal = 0;
-  let agodaCollected = 0;
+  let expediaCollectable = 0;
+  let expediaConfirmed = 0;
+  let bookingCollectable = 0;
+  let bookingConfirmed = 0;
+  let agodaCollectable = 0;
+  let agodaConfirmed = 0;
 
   const monthlyData = {};
 
   // Iterate through filtered data and calculate metrics
   filteredData.forEach((item) => {
-    expediaTotal += parseCurrency(item.expedia?.amount_collectable);
-    expediaCollected += parseCurrency(item.expedia?.amount_confirmed);
-    bookingTotal += parseCurrency(item.booking?.amount_collectable);
-    bookingCollected += parseCurrency(item.booking?.amount_confirmed);
-    agodaTotal += parseCurrency(item.agoda?.amount_collectable);
-    agodaCollected += parseCurrency(item.agoda?.amount_confirmed);
+    // console.log("items", item);
+    expediaCollectable += parseCurrency(item.expedia?.amount_collectable);
+    expediaConfirmed += parseCurrency(item.expedia?.amount_confirmed);
+    bookingCollectable += parseCurrency(item.booking?.amount_collectable);
+    bookingConfirmed += parseCurrency(item.booking?.amount_confirmed);
+    agodaCollectable += parseCurrency(item.agoda?.amount_collectable);
+    agodaConfirmed += parseCurrency(item.agoda?.amount_confirmed);
 
     const date = new Date(item.from);
     const monthKey = date.toLocaleString('default', { month: 'long' });
 
     if (!monthlyData[monthKey]) {
       monthlyData[monthKey] = {
-        audited: 0,
-        remaining: 0,
-        collected: 0,
+        collectable: 0,
+        confirmed: 0,
       };
     }
 
-    const monthlyExpediaAudited = parseCurrency(item.expedia?.amount_collectable);
-    const monthlyExpediaCollected = parseCurrency(item.expedia?.amount_confirmed);
-    const monthlyBookingAudited = parseCurrency(item.booking?.amount_collectable);
-    const monthlyBookingCollected = parseCurrency(item.booking?.amount_confirmed);
-    const monthlyAgodaAudited = parseCurrency(item.agoda?.amount_collectable);
-    const monthlyAgodaCollected = parseCurrency(item.agoda?.amount_confirmed);
+    const monthlyExpediaCollectable = parseCurrency(item.expedia?.amount_collectable);
+    const monthlyExpediaConfirmed = parseCurrency(item.expedia?.amount_confirmed);
+    const monthlyBookingCollectable = parseCurrency(item.booking?.amount_collectable);
+    const monthlyBookingConfirmed = parseCurrency(item.booking?.amount_confirmed);
+    const monthlyAgodaCollectable = parseCurrency(item.agoda?.amount_collectable);
+    const monthlyAgodaConfirmed = parseCurrency(item.agoda?.amount_confirmed);
 
-    monthlyData[monthKey].audited += monthlyExpediaAudited + monthlyBookingAudited + monthlyAgodaAudited;
-    monthlyData[monthKey].collected += monthlyExpediaCollected + monthlyBookingCollected + monthlyAgodaCollected;
-    monthlyData[monthKey].remaining +=
-      monthlyExpediaAudited +
-      monthlyBookingAudited +
-      monthlyAgodaAudited -
-      (monthlyExpediaCollected + monthlyBookingCollected + monthlyAgodaCollected);
+    monthlyData[monthKey].collectable += monthlyExpediaCollectable + monthlyBookingCollectable + monthlyAgodaCollectable;
+    monthlyData[monthKey].confirmed += monthlyExpediaConfirmed + monthlyBookingConfirmed + monthlyAgodaConfirmed;
   });
 
-  const total = expediaTotal + bookingTotal + agodaTotal;
-  const collected = expediaCollected + bookingCollected + agodaCollected;
-  const remaining = total - collected;
+  const totalCollectable = expediaCollectable + bookingCollectable + agodaCollectable;
+  const totalConfirmed = expediaConfirmed + bookingConfirmed + agodaConfirmed;
+
+  // Calculate gross collection (total of all confirmed amounts)
+  const grossCollection = totalConfirmed;
 
   const chartData = Object.entries(monthlyData).map(([month, values]) => ({
     month,
-    audited: Math.round(values.audited),
-    remaining: Math.round(values.remaining),
-    collected: Math.round(values.collected),
+    collectable: parseFloat(values.collectable.toFixed(2)), // Use toFixed and convert back to number
+    confirmed: parseFloat(values.confirmed.toFixed(2)), // Use toFixed and convert back to number
   }));
 
   return {
     metrics: {
-      total,
-      collected,
-      remaining,
+      totalCollectable: parseFloat(totalCollectable.toFixed(2)), // Use toFixed for two decimal places
+      totalConfirmed: parseFloat(totalConfirmed.toFixed(2)), // Use toFixed for two decimal places
+      grossCollection: parseFloat(grossCollection.toFixed(2)), // Use toFixed for two decimal places
     },
     trend: chartData,
-    breakdown: {
-      expedia: {
-        total: expediaTotal,
-        collected: expediaCollected,
-        remaining: expediaTotal - expediaCollected,
-      },
-      booking: {
-        total: bookingTotal,
-        collected: bookingCollected,
-        remaining: bookingTotal - bookingCollected,
-      },
-      agoda: {
-        total: agodaTotal,
-        collected: agodaCollected,
-        remaining: agodaTotal - agodaCollected,
-      },
-    },
   };
 };
 
