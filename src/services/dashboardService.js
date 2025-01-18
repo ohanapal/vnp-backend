@@ -579,8 +579,6 @@ const getPortfolioPerformance = async (
   }
 
   try {
-    const skip = (page - 1) * limit;
-
     const data = await SheetData.find(filter, {
       portfolio_name: 1,
       'expedia.amount_collectable': 1,
@@ -591,8 +589,6 @@ const getPortfolioPerformance = async (
       'agoda.amount_confirmed': 1,
     })
       .populate('portfolio_name', 'name')
-      .skip(skip)
-      .limit(limit)
       .lean();
 
     const parseAmount = (value) => {
@@ -602,53 +598,65 @@ const getPortfolioPerformance = async (
       return isNaN(parsedValue) ? 0 : parsedValue;
     };
 
-    const consolidatedData = data.reduce(
-      (acc, item) => {
-        const portfolioName = item?.portfolio_name?.name || 'Unknown Property';
+    // Group by portfolio name and calculate totals
+    const portfolioTotals = data.reduce((acc, item) => {
+      const portfolioName = item?.portfolio_name?.name || 'Unknown Property';
 
-        console.log(portfolioName);
-        const reportedAmount =
-          parseAmount(item.expedia?.amount_collectable) +
-          parseAmount(item.booking?.amount_collectable) +
-          parseAmount(item.agoda?.amount_collectable);
+      const reportedAmount =
+        parseAmount(item.expedia?.amount_collectable) +
+        parseAmount(item.booking?.amount_collectable) +
+        parseAmount(item.agoda?.amount_collectable);
 
-        const claimedAmount =
-          parseAmount(item.expedia?.amount_confirmed) +
-          parseAmount(item.booking?.amount_confirmed) +
-          parseAmount(item.agoda?.amount_confirmed);
+      const claimedAmount =
+        parseAmount(item.expedia?.amount_confirmed) +
+        parseAmount(item.booking?.amount_confirmed) +
+        parseAmount(item.agoda?.amount_confirmed);
 
-        acc.portfolios.push({
+      // console.log(portfolioName);
+      if (!acc[portfolioName]) {
+        acc[portfolioName] = {
           portfolioName,
-          amountCollectable: reportedAmount.toFixed(2),
-          amountConfirmed: claimedAmount.toFixed(2),
-        });
+          amountCollectable: 0,
+          amountConfirmed: 0,
+        };
+      }
 
-        return acc;
-      },
-      {
-        portfolios: [],
-      },
-    );
+      acc[portfolioName].amountCollectable += reportedAmount;
+      acc[portfolioName].amountConfirmed += claimedAmount;
 
-    // Sort properties
+      return acc;
+    }, {});
+
+    // Convert the grouped data into an array
+    const consolidatedData = Object.values(portfolioTotals);
+
+    // Sort portfolios
     const sortMultiplier = sortOrder === 'desc' ? -1 : 1;
-    consolidatedData.portfolios.sort((a, b) => {
+    consolidatedData.sort((a, b) => {
       if (sortBy === 'portfolioName') {
         return a.portfolioName.localeCompare(b.portfolioName) * sortMultiplier;
       } else if (sortBy === 'amountCollectable') {
-        return (parseFloat(a.amountCollectable) - parseFloat(b.amountCollectable)) * sortMultiplier;
+        return (a.amountCollectable - b.amountCollectable) * sortMultiplier;
       } else if (sortBy === 'amountConfirmed') {
-        return (parseFloat(a.amountConfirmed) - parseFloat(b.amountConfirmed)) * sortMultiplier;
+        return (a.amountConfirmed - b.amountConfirmed) * sortMultiplier;
       }
       return 0;
     });
 
+    // Paginate the results
+    const startIndex = (page - 1) * limit;
+    const paginatedData = consolidatedData.slice(startIndex, startIndex + limit);
+
     // Add pagination metadata
-    const totalCount = await SheetData.countDocuments(filter);
+    const totalCount = consolidatedData.length;
     const totalPages = Math.ceil(totalCount / limit);
 
     return {
-      ...consolidatedData,
+      portfolios: paginatedData.map((portfolio) => ({
+        ...portfolio,
+        amountCollectable: portfolio.amountCollectable.toFixed(2),
+        amountConfirmed: portfolio.amountConfirmed.toFixed(2),
+      })),
       pagination: {
         currentPage: page,
         totalPages,
