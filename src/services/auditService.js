@@ -3,11 +3,12 @@ const propertyModel = require('../models/propertyModel'); // Assuming this is yo
 const AppError = require('../utils/appError');
 const { ObjectId } = require('mongodb');
 const portfolioModel = require('../models/portfolioModel');
+const logger = require('../utils/logger'); // Assuming logger is set up in utils/logger.js
 
 const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filters, role, connectedEntityIds }) => {
   try {
     const skip = (page - 1) * limit; // Calculate the number of documents to skip for pagination
-
+    logger.info('Building query for fetching sheet data', { page, limit, filters, role });
     // Build the query
     const query = {};
     // console.log('connectedEntityIds:', connectedEntityIds);
@@ -26,8 +27,8 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
         try {
           query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
         } catch (error) {
-          console.error('Error fetching portfolio:', error);
-          throw new AppError(error.message);
+          logger.error('Error parsing sub_portfolio filter', { error: error.message });
+          throw new AppError('Invalid sub-portfolio filter', 400);
         }
       }
 
@@ -44,8 +45,8 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
           // console.log('filters.portfolio:', filters.portfolio);
           query.property_name = new ObjectId(filters?.property);
         } catch (error) {
-          console.error('Error fetching portfolio:', error.message);
-          throw new AppError(error); // Ensure proper error handling
+          logger.error('Error parsing property filter', { error: error.message });
+          throw new AppError('Invalid property filter', 400);
         }
       }
 
@@ -195,7 +196,7 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
 
     // Count total documents for the query
     const total = await sheetDataModel.countDocuments(query);
-
+    logger.info('Query executed successfully', { total });
     return { data, total };
   } catch (error) {
     throw new Error(`Error fetching data: ${error.message}`);
@@ -344,14 +345,17 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
 // };
 
 const updateAuditDataService = async (id, data, role, connectedEntityIds) => {
+  logger.info(`Finding sheet data with ID: ${id}`);
   // Find the sheet data by ID
   const sheetData = await sheetDataModel.findById(id);
   if (!sheetData) {
-    throw new Error('Sheet data not found');
+    logger.error(`Sheet data with ID: ${id} not found`);
+    throw new AppError('Sheet data not found', 404);
   }
 
   // Admin can update any sheet data
   if (role === 'admin') {
+    logger.info(`Admin updating sheet data with ID: ${id}`);
     return await sheetDataModel.findByIdAndUpdate(id, data, { new: true });
   } else {
     // Non-admin roles should only be able to update based on connectedEntityIds
@@ -390,15 +394,21 @@ const updateAuditDataService = async (id, data, role, connectedEntityIds) => {
       //   data.property_name = property._id; // Use the ID in the sheet data
       // }
 
+      logger.info(`User with role: ${role} authorized to update sheet data with ID: ${id}`);
       // Restrict all users (admin and non-admin) from changing portfolio_name, sub_portfolio, and property_name
       if (data.portfolio_name || data.sub_portfolio || data.property_name) {
-        throw new Error('Those field are restricted for update:- portfolio_name, sub_portfolio, or property_name');
+        logger.error(`Unauthorized field update attempt for sheet data with ID: ${id}`);
+        throw new AppError(
+          'The following fields are restricted for update: portfolio_name, sub_portfolio, or property_name',
+          403,
+        );
       }
-
+      logger.info(`Updating sheet data with ID: ${id} for role: ${role}`);
       // Update the sheet data with the modified data
       return await sheetDataModel.findByIdAndUpdate(id, data, { new: true });
     } else {
-      throw new AppError('You are not authorized to update this data');
+      logger.error(`User with role: ${role} not authorized to update sheet data with ID: ${id}`);
+      throw new AppError('You are not authorized to update this data', 403);
     }
   }
 };
@@ -457,6 +467,8 @@ const getSingleAuditDataService = async (id, role, connectedEntityIds) => {
     throw new Error('You are not authorized to access this data');
   }
 };
+
+
 module.exports = {
   getAuditSheetData,
   getSingleAuditDataService,

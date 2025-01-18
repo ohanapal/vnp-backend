@@ -1,4 +1,7 @@
 const { getAuditSheetData } = require('../services/auditService');
+const logger = require('../utils/logger'); // Assuming logger is set up in utils/logger.js
+const AppError = require('../utils/appError');
+
 const sheetDataController = async (req, res) => {
   const { role, connected_entity_id: connectedEntityIds } = req.user;
   try {
@@ -15,7 +18,7 @@ const sheetDataController = async (req, res) => {
       endDate,
     } = req.query;
     // console.log('query', req.query);
-
+    logger.info('Received request to fetch sheet data', { user: req.user, query: req.query });
     // Build the filters object
     const filters = {};
     if (sub_portfolio) filters.sub_portfolio = sub_portfolio;
@@ -34,7 +37,7 @@ const sheetDataController = async (req, res) => {
       role,
       connectedEntityIds,
     });
-
+    logger.info('Sheet data fetched successfully', { totalItems: result.length });
     res.status(200).json({
       success: true,
       message: 'Data fetched successfully',
@@ -46,6 +49,7 @@ const sheetDataController = async (req, res) => {
       },
     });
   } catch (error) {
+    logger.error('Error fetching sheet data', { error: error.message });
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -57,17 +61,24 @@ const updateAuditDataController = async (req, res) => {
     const { role, connected_entity_id: connectedEntityIds } = req.user;
 
     // const user = req.user; // Assuming req.user contains role and connectedEntityIds
-
+    logger.info(`Update request received for sheet data with ID: ${id} by user with role: ${role}`);
     // Call the service to update the sheet data
     const updatedData = await updateSheetDataService(id, data, role, connectedEntityIds);
-
+    logger.info(`Sheet data with ID: ${id} updated successfully by user with role: ${role}`);
     return res.status(200).json({
       success: true,
       message: 'Sheet data updated successfully',
       data: updatedData,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    logger.error(`Error updating sheet data with ID: ${req.params.id} - ${error.message}`);
+
+    // Use AppError for consistent error response
+    const statusCode = error instanceof AppError ? error.statusCode : 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 

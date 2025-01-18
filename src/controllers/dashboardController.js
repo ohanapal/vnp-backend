@@ -3,6 +3,7 @@ const {
   getStatusDistribution,
   getOTAPerformance,
   getPropertyPerformance,
+  getPortfolioPerformance,
 } = require('../services/dashboardService'); // Adjust the path to your services
 
 const revenue = async (req, res) => {
@@ -66,4 +67,26 @@ const propertyPerformance = async (req, res) => {
   }
 };
 
-module.exports = { revenue, distributionStatus, OTAPerformance, propertyPerformance };
+const portfolioPerformanceController = async (req, res) => {
+  const { startDate, endDate, page, limit, sortBy, sortOrder } = req.query;
+  const { role, connected_entity_id: connectedEntityIds } = req.user;
+
+  try {
+    const portfolioData = await getPortfolioPerformance(
+      role,
+      connectedEntityIds,
+      startDate,
+      endDate,
+      parseInt(page, 10) || 1,
+      parseInt(limit, 10) || 10,
+      sortBy || 'portfolioName', // Default to propertyName
+      sortOrder || 'asc', // Default to ascending order
+    );
+    res.json(portfolioData);
+  } catch (error) {
+    console.error('Error fetching portfolio performance metrics:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+module.exports = { revenue, distributionStatus, OTAPerformance, propertyPerformance, portfolioPerformanceController };

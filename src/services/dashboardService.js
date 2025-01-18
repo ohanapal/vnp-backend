@@ -551,4 +551,121 @@ const getPropertyPerformance = async (
   }
 };
 
-module.exports = { getRevenueMetrics, getStatusDistribution, getOTAPerformance, getPropertyPerformance };
+const getPortfolioPerformance = async (
+  role,
+  connectedEntityIds,
+  startDate,
+  endDate,
+  page = 1,
+  limit = 10,
+  sortBy = 'portfolioName',
+  sortOrder = 'asc',
+) => {
+  const filter = {};
+
+  if (startDate && endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999); // Set the end time to the end of the day
+    filter.from = { $gte: start, $lte: end };
+  }
+
+  if (role === 'portfolio') {
+    filter.portfolio_name = { $in: connectedEntityIds };
+  } else if (role === 'sub-portfolio') {
+    filter.sub_portfolio = { $in: connectedEntityIds };
+  } else if (role === 'property') {
+    filter.property_name = { $in: connectedEntityIds };
+  }
+
+  try {
+    const skip = (page - 1) * limit;
+
+    const data = await SheetData.find(filter, {
+      portfolio_name: 1,
+      'expedia.amount_collectable': 1,
+      'expedia.amount_confirmed': 1,
+      'booking.amount_collectable': 1,
+      'booking.amount_confirmed': 1,
+      'agoda.amount_collectable': 1,
+      'agoda.amount_confirmed': 1,
+    })
+      .populate('portfolio_name', 'name')
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const parseAmount = (value) => {
+      if (!value) return 0;
+      const cleanedValue = value.trim().replace(/[^0-9.-]+/g, '');
+      const parsedValue = parseFloat(cleanedValue);
+      return isNaN(parsedValue) ? 0 : parsedValue;
+    };
+
+    const consolidatedData = data.reduce(
+      (acc, item) => {
+        const portfolioName = item?.portfolio_name?.name || 'Unknown Property';
+
+        console.log(portfolioName);
+        const reportedAmount =
+          parseAmount(item.expedia?.amount_collectable) +
+          parseAmount(item.booking?.amount_collectable) +
+          parseAmount(item.agoda?.amount_collectable);
+
+        const claimedAmount =
+          parseAmount(item.expedia?.amount_confirmed) +
+          parseAmount(item.booking?.amount_confirmed) +
+          parseAmount(item.agoda?.amount_confirmed);
+
+        acc.portfolios.push({
+          portfolioName,
+          amountCollectable: reportedAmount.toFixed(2),
+          amountConfirmed: claimedAmount.toFixed(2),
+        });
+
+        return acc;
+      },
+      {
+        portfolios: [],
+      },
+    );
+
+    // Sort properties
+    const sortMultiplier = sortOrder === 'desc' ? -1 : 1;
+    consolidatedData.portfolios.sort((a, b) => {
+      if (sortBy === 'portfolioName') {
+        return a.portfolioName.localeCompare(b.portfolioName) * sortMultiplier;
+      } else if (sortBy === 'amountCollectable') {
+        return (parseFloat(a.amountCollectable) - parseFloat(b.amountCollectable)) * sortMultiplier;
+      } else if (sortBy === 'amountConfirmed') {
+        return (parseFloat(a.amountConfirmed) - parseFloat(b.amountConfirmed)) * sortMultiplier;
+      }
+      return 0;
+    });
+
+    // Add pagination metadata
+    const totalCount = await SheetData.countDocuments(filter);
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return {
+      ...consolidatedData,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        pageSize: limit,
+        totalCount,
+      },
+    };
+  } catch (error) {
+    console.error('Error while fetching or processing data:', error);
+    throw error;
+  }
+};
+
+module.exports = {
+  getRevenueMetrics,
+  getStatusDistribution,
+  getOTAPerformance,
+  getPropertyPerformance,
+  getPortfolioPerformance,
+};
