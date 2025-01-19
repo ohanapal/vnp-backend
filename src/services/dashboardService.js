@@ -1,5 +1,6 @@
 const SheetData = require('../models/sheetDataModel'); // Adjust the path to your models
-
+const AppError = require('../utils/appError');
+const { ObjectId } = require('mongodb');
 const parseCurrency = (value) => {
   if (!value) return 0;
   const cleanedValue = value.trim().replace(/[^0-9.-]+/g, '');
@@ -430,16 +431,7 @@ const getOTAPerformance = async (role, connectedEntityIds, startDate, endDate) =
 //   }
 // };
 
-const getPropertyPerformance = async (
-  role,
-  connectedEntityIds,
-  startDate,
-  endDate,
-  page = 1,
-  limit = 10,
-  sortBy = 'propertyName',
-  sortOrder = 'asc',
-) => {
+const getPropertyPerformance = async (role, connectedEntityIds, startDate, endDate, sub_portfolio) => {
   const filter = {};
 
   if (startDate && endDate) {
@@ -447,6 +439,16 @@ const getPropertyPerformance = async (
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999); // Set the end time to the end of the day
     filter.from = { $gte: start, $lte: end };
+  }
+
+  if (sub_portfolio) {
+    try {
+      sub_portfolio = new ObjectId(sub_portfolio);
+      filter.sub_portfolio = sub_portfolio;
+    } catch (error) {
+      console.error('Error fetching portfolio:', error);
+      throw new AppError(error.message);
+    }
   }
 
   if (role === 'portfolio') {
@@ -458,8 +460,6 @@ const getPropertyPerformance = async (
   }
 
   try {
-    const skip = (page - 1) * limit;
-
     const data = await SheetData.find(filter, {
       property_name: 1,
       portfolio_name: 1,
@@ -470,10 +470,7 @@ const getPropertyPerformance = async (
       'agoda.amount_collectable': 1,
       'agoda.amount_confirmed': 1,
     })
-      .populate('portfolio_name', 'name')
       .populate('property_name', 'name')
-      .skip(skip)
-      .limit(limit)
       .lean();
 
     const parseAmount = (value) => {
@@ -483,68 +480,22 @@ const getPropertyPerformance = async (
       return isNaN(parsedValue) ? 0 : parsedValue;
     };
 
-    const consolidatedData = data.reduce(
-      (acc, item) => {
-        const propertyName = item?.property_name?.name || 'Unknown Property';
+    const result = data.map((item) => {
+      const expediaCollectable = parseAmount(item.expedia?.amount_collectable);
+      const expediaConfirmed = parseAmount(item.expedia?.amount_confirmed);
+      const bookingCollectable = parseAmount(item.booking?.amount_collectable);
+      const bookingConfirmed = parseAmount(item.booking?.amount_confirmed);
+      const agodaCollectable = parseAmount(item.agoda?.amount_collectable);
+      const agodaConfirmed = parseAmount(item.agoda?.amount_confirmed);
 
-        const reportedAmount =
-          parseAmount(item.expedia?.amount_collectable) +
-          parseAmount(item.booking?.amount_collectable) +
-          parseAmount(item.agoda?.amount_collectable);
-
-        const claimedAmount =
-          parseAmount(item.expedia?.amount_confirmed) +
-          parseAmount(item.booking?.amount_confirmed) +
-          parseAmount(item.agoda?.amount_confirmed);
-
-        acc.properties.push({
-          propertyName,
-          amountCollectable: reportedAmount.toFixed(2),
-          amountConfirmed: claimedAmount.toFixed(2),
-        });
-
-        acc.totalCollectable += reportedAmount;
-        acc.totalConfirmed += claimedAmount;
-
-        return acc;
-      },
-      {
-        properties: [],
-        totalCollectable: 0,
-        totalConfirmed: 0,
-      },
-    );
-
-    // Round the totals to 2 decimal places
-    consolidatedData.totalCollectable = consolidatedData.totalCollectable.toFixed(2);
-    consolidatedData.totalConfirmed = consolidatedData.totalConfirmed.toFixed(2);
-
-    // Sort properties
-    const sortMultiplier = sortOrder === 'desc' ? -1 : 1;
-    consolidatedData.properties.sort((a, b) => {
-      if (sortBy === 'propertyName') {
-        return a.propertyName.localeCompare(b.propertyName) * sortMultiplier;
-      } else if (sortBy === 'amountCollectable') {
-        return (parseFloat(a.amountCollectable) - parseFloat(b.amountCollectable)) * sortMultiplier;
-      } else if (sortBy === 'amountConfirmed') {
-        return (parseFloat(a.amountConfirmed) - parseFloat(b.amountConfirmed)) * sortMultiplier;
-      }
-      return 0;
+      return {
+        property_name: item.property_name?.name || '',
+        total_collectable: expediaCollectable + bookingCollectable + agodaCollectable,
+        total_confirmed: expediaConfirmed + bookingConfirmed + agodaConfirmed,
+      };
     });
 
-    // Add pagination metadata
-    const totalCount = await SheetData.countDocuments(filter);
-    const totalPages = Math.ceil(totalCount / limit);
-
-    return {
-      ...consolidatedData,
-      pagination: {
-        currentPage: page,
-        totalPages,
-        pageSize: limit,
-        totalCount,
-      },
-    };
+    return result;
   } catch (error) {
     console.error('Error while fetching or processing data:', error);
     throw error;

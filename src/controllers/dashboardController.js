@@ -46,20 +46,11 @@ const OTAPerformance = async (req, res) => {
 };
 
 const propertyPerformance = async (req, res) => {
-  const { startDate, endDate, page, limit, sortBy, sortOrder } = req.query;
+  const { startDate, endDate, sub_portfolio } = req.query;
   const { role, connected_entity_id: connectedEntityIds } = req.user;
 
   try {
-    const propertyData = await getPropertyPerformance(
-      role,
-      connectedEntityIds,
-      startDate,
-      endDate,
-      parseInt(page, 10) || 1,
-      parseInt(limit, 10) || 10,
-      sortBy || 'propertyName', // Default to propertyName
-      sortOrder || 'asc', // Default to ascending order
-    );
+    const propertyData = await getPropertyPerformance(role, connectedEntityIds, startDate, endDate, sub_portfolio);
     res.json(propertyData);
   } catch (error) {
     console.error('Error fetching property performance metrics:', error);

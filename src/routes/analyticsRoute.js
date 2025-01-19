@@ -24,7 +24,7 @@ router.get(
 
 
 router.get(
-  '/portfolio-performance-metrics',
+  '/property-performance-metrics',
   authMiddleware('admin', 'sub-portfolio', 'portfolio', 'property'),
   propertyPerformance,
 );
