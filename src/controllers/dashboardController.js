@@ -46,11 +46,20 @@ const OTAPerformance = async (req, res) => {
 };
 
 const propertyPerformance = async (req, res) => {
-  const { startDate, endDate, sub_portfolio } = req.query;
+  const { startDate, endDate, sub_portfolio, posting_type } = req.query;
   const { role, connected_entity_id: connectedEntityIds } = req.user;
 
   try {
-    const propertyData = await getPropertyPerformance(role, connectedEntityIds, startDate, endDate, sub_portfolio);
+    // Decode posting_type to handle cases like "OTA+" sent in encoded form
+    const decodedPostingType = posting_type ? decodeURIComponent(posting_type.trim()) : undefined;
+    const propertyData = await getPropertyPerformance(
+      role,
+      connectedEntityIds,
+      startDate,
+      endDate,
+      sub_portfolio,
+      decodedPostingType,
+    );
     res.json(propertyData);
   } catch (error) {
     console.error('Error fetching property performance metrics:', error);

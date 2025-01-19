@@ -431,7 +431,7 @@ const getOTAPerformance = async (role, connectedEntityIds, startDate, endDate) =
 //   }
 // };
 
-const getPropertyPerformance = async (role, connectedEntityIds, startDate, endDate, sub_portfolio) => {
+const getPropertyPerformance = async (role, connectedEntityIds, startDate, endDate, sub_portfolio, posting_type) => {
   const filter = {};
 
   if (startDate && endDate) {
@@ -451,6 +451,10 @@ const getPropertyPerformance = async (role, connectedEntityIds, startDate, endDa
     }
   }
 
+  if (posting_type) {
+    filter.posting_type = posting_type;
+  }
+
   if (role === 'portfolio') {
     filter.portfolio_name = { $in: connectedEntityIds };
   } else if (role === 'sub-portfolio') {
@@ -458,6 +462,8 @@ const getPropertyPerformance = async (role, connectedEntityIds, startDate, endDa
   } else if (role === 'property') {
     filter.property_name = { $in: connectedEntityIds };
   }
+
+  // console.log(filter);
 
   try {
     const data = await SheetData.find(filter, {
