@@ -1,5 +1,5 @@
 const {
-  getPortfolioSheetData,
+  getPropertySheetData,
   deleteSheetDataService,
   updateSheetDataService,
   getSingleSheetDataService,
@@ -30,7 +30,7 @@ const sheetDataController = async (req, res) => {
     if (posting_type) filters.posting_type = posting_type;
     if (portfolio) filters.portfolio = portfolio;
 
-    const result = await getPortfolioSheetData({
+    const result = await getPropertySheetData({
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
       search,
