@@ -13,6 +13,7 @@ const Property = require('../models/propertyModel'); // Replace with actual path
 const SubPortfolio = require('../models/subPortfolioModel');
 const { ObjectId } = require('mongodb');
 const logger = require('../utils/logger'); // Import the logger
+const sheetDataModel = require('../models/sheetDataModel');
 
 exports.createAdmin = async (userData) => {
   const { password, ...otherData } = userData; // Destructure password from other user data
@@ -268,6 +269,153 @@ exports.sendForgetPasswordOTP = async (userData) => {
   };
 };
 
+// exports.getAllUsers = async (
+//   page = 1,
+//   limit = 10,
+//   currentUserId,
+//   role,
+//   searchQuery = '',
+//   portfolio,
+//   subPortfolio,
+//   property,
+// ) => {
+//   const skip = (page - 1) * limit;
+//   let query = {};
+
+//   // console.log('Initial query object:', query);
+
+//   if (role !== 'admin') {
+//     query.$or = [{ invited_user: new ObjectId(currentUserId) }, { _id: new ObjectId(currentUserId) }];
+//     // console.log('Query after role check:', query);
+//   }
+
+//   // If there's a search query, apply the search to the collections and user fields
+//   if (searchQuery) {
+//     if (role === 'admin') {
+//       // Admins can search across all data
+//       query.$or = [
+//         { name: { $regex: searchQuery, $options: 'i' } },
+//         { email: { $regex: searchQuery, $options: 'i' } },
+//         { phone: { $regex: searchQuery, $options: 'i' } },
+//         { role: { $regex: searchQuery, $options: 'i' } },
+//       ];
+
+//       // Search in Portfolio, Property, and SubPortfolio collections
+//       const [portfolioMatches, propertyMatches, subPortfolioMatches] = await Promise.all([
+//         Portfolio.find({ name: { $regex: searchQuery, $options: 'i' } }).select('_id'),
+//         Property.find({ name: { $regex: searchQuery, $options: 'i' } }).select('_id'),
+//         SubPortfolio.find({ name: { $regex: searchQuery, $options: 'i' } }).select('_id'),
+//       ]);
+
+//       // Collect all matching IDs from entities
+//       const matchedEntityIds = [
+//         ...portfolioMatches.map((p) => p._id.toString()),
+//         ...propertyMatches.map((p) => p._id.toString()),
+//         ...subPortfolioMatches.map((p) => p._id.toString()),
+//       ];
+
+//       // Find users whose connected_entity_id matches the entity IDs found above
+//       const userIdsFromEntities = await User.find({
+//         connected_entity_id: { $in: matchedEntityIds },
+//       }).select('_id');
+
+//       // Add the user IDs of matching connected entities to the search query
+//       query.$or.push({ _id: { $in: userIdsFromEntities.map((user) => user._id) } });
+//     } else {
+//       // Non-admin users: Search only in their own data (connected entities and user-specific fields)
+//       query.$or = [
+//         { name: { $regex: searchQuery, $options: 'i' } },
+//         { email: { $regex: searchQuery, $options: 'i' } },
+//         { phone: { $regex: searchQuery, $options: 'i' } },
+//         { role: { $regex: searchQuery, $options: 'i' } },
+//         { _id: new ObjectId(currentUserId) }, // Search only for the current user's ID
+//       ];
+
+//       // Optional: You can add additional filters here if needed, e.g., for specific portfolio, subPortfolio, or property
+//       if (portfolio) {
+//         query['connected_entity_id.portfolio'] = { $in: [portfolio] };
+//       }
+//       if (subPortfolio) {
+//         query['connected_entity_id.subPortfolio'] = { $in: [subPortfolio] };
+//       }
+//       if (property) {
+//         query['connected_entity_id.property'] = { $in: [property] };
+//       }
+//     }
+//   }
+
+//   // Construct filter conditions for the "connected_entity_id" array.
+//   let connectedEntityConditions = [];
+//   if (portfolio) {
+//     connectedEntityConditions.push(portfolio);
+//     // console.log('Added portfolio to connectedEntityConditions:', connectedEntityConditions);
+//   }
+//   if (subPortfolio) {
+//     connectedEntityConditions.push(subPortfolio);
+//     // console.log('Added subPortfolio to connectedEntityConditions:', connectedEntityConditions);
+//   }
+//   if (property) {
+//     connectedEntityConditions.push(property);
+//     // console.log('Added property to connectedEntityConditions:', connectedEntityConditions);
+//   }
+
+//   // If there are any filters, use $in to check if any of the values are in connected_entity_id.
+//   if (connectedEntityConditions.length > 0) {
+//     query['connected_entity_id'] = { $in: connectedEntityConditions };
+//     // console.log('Query after adding connected_entity_id filter:', query);
+//   }
+
+//   // Fetch users and total count
+//   const [users, total] = await Promise.all([User.find(query).skip(skip).limit(limit).lean(), User.countDocuments(query)]);
+//   // console.log('Fetched users:', users);
+//   // console.log('Total users count:', total);
+
+//   const transformedUsers = await Promise.all(
+//     users.map(async (user) => {
+//       // console.log('Processing user:', user);
+
+//       // If connected_entity_id exists and contains values
+//       if (user.connected_entity_id && user.connected_entity_id.length > 0) {
+//         let entityNames = [];
+
+//         // Fetch entity names based on the user's role
+//         if (user.role === 'portfolio') {
+//           // console.log('Fetching Portfolio names for user:', user);
+//           entityNames = await Portfolio.find({ _id: { $in: user.connected_entity_id } }).select('name');
+//         } else if (user.role === 'property') {
+//           // console.log('Fetching Property names for user:', user);
+//           entityNames = await Property.find({ _id: { $in: user.connected_entity_id } }).select('name');
+//         } else if (user.role === 'sub-portfolio') {
+//           // console.log('Fetching SubPortfolio names for user:', user);
+//           entityNames = await SubPortfolio.find({ _id: { $in: user.connected_entity_id } }).select('name');
+//         }
+
+//         // console.log('Entity names for user:', entityNames);
+
+//         // Replace connected_entity_id with just the names
+//         user.connected_entity_id = entityNames.map((entity) => entity.name);
+//         // console.log('Updated connected_entity_id with names:', user.connected_entity_id);
+//       }
+
+//       // Remove the password field for security
+//       delete user.password;
+//       // console.log('User after removing password:', user);
+
+//       return user;
+//     }),
+//   );
+
+//   return {
+//     success: true,
+//     data: transformedUsers,
+//     pagination: {
+//       currentPage: page,
+//       totalPages: Math.ceil(total / limit),
+//       totalItems: total,
+//     },
+//   };
+// };
+
 exports.getAllUsers = async (
   page = 1,
   limit = 10,
@@ -277,6 +425,7 @@ exports.getAllUsers = async (
   portfolio,
   subPortfolio,
   property,
+  roleFilter, // New parameter for role filter
 ) => {
   const skip = (page - 1) * limit;
   let query = {};
@@ -341,6 +490,11 @@ exports.getAllUsers = async (
         query['connected_entity_id.property'] = { $in: [property] };
       }
     }
+  }
+
+  // **Add the new role filter** if provided
+  if (roleFilter) {
+    query.role = roleFilter; // Add this line to filter by role
   }
 
   // Construct filter conditions for the "connected_entity_id" array.
@@ -463,4 +617,117 @@ exports.updateOwnProfile = async (userId, updatedData) => {
   delete userResponse.password; // Delete the password field
 
   return userResponse;
+};
+
+exports.getAllPortfoliosSubPortfoliosPropertiesName = async (role, connectedEntityIds, search = '', setRole = '') => {
+  try {
+    const query = {};
+
+    // Build search query
+    if (search) {
+      const searchRegex = { $regex: search, $options: 'i' };
+
+      if (role === 'property') {
+        const matchingProperties = await Property.find({ name: searchRegex });
+        // console.log('matchingProperties:', matchingProperties);
+
+        const matchingPropertyIds = matchingProperties.map((property) => property._id);
+        // console.log('matchingPropertyIds:', matchingPropertyIds);
+
+        query.property_name = {
+          $in: matchingPropertyIds.filter((_id) => connectedEntityIds.includes(_id.toString())),
+        };
+
+        // console.log('connectedEntityIds', connectedEntityIds);
+        console.log('query', query);
+      } else if (role === 'sub-portfolio') {
+        // Search for sub-portfolios
+        const matchingSubPortfolios = await subPortfolioModel.find({ name: searchRegex });
+        const matchingSubPortfolioIds = matchingSubPortfolios.map((subPortfolio) => subPortfolio._id);
+
+        query.sub_portfolio = {
+          $in: matchingSubPortfolioIds.filter((id) => connectedEntityIds.includes(id.toString())),
+        };
+      } else if (role === 'portfolio') {
+        // Search for portfolios
+        const matchingPortfolios = await portfolioModel.find({ name: searchRegex });
+        const matchingPortfolioIds = matchingPortfolios.map((portfolio) => portfolio._id);
+
+        query.portfolio_name = {
+          $in: matchingPortfolioIds.filter((id) => connectedEntityIds.includes(id.toString())),
+        };
+        console.log('query portfolio' , query);
+      } else {
+        // For admin or other roles, search across all fields
+        query.$or = [
+          { 'portfolio_name.name': searchRegex },
+          { 'sub_portfolio.name': searchRegex },
+          { 'property_name.name': searchRegex },
+        ];
+      }
+    }
+
+
+
+    // Apply role-based filtering
+    if (setRole) {
+      switch (role) {
+        case 'admin':
+          // Admin can access everything, no filtering needed
+          break;
+        case 'portfolio':
+          query.portfolio_name = { $in: connectedEntityIds };
+          break;
+        case 'sub-portfolio':
+          query.sub_portfolio = { $in: connectedEntityIds };
+          break;
+        case 'property':
+          query.property_name = { $in: connectedEntityIds };
+          break;
+        default:
+          throw new Error('Invalid role');
+      }
+    }
+
+
+    // Fetch data with query and populate
+    const matchedData = await sheetDataModel
+      .find(query)
+      .populate({ path: 'portfolio_name', select: 'name' })
+      .populate({ path: 'sub_portfolio', select: 'name' })
+      .populate({ path: 'property_name', select: 'name' });
+
+    console.log('matchedData', matchedData)
+
+    // Format the response based on setRole
+    const result = matchedData
+      .map((item) => {
+        const response = {};
+
+        if (setRole === 'portfolio' && item.portfolio_name) {
+          response.portfolio = {
+            _id: item.portfolio_name._id,
+            name: item.portfolio_name.name,
+          };
+        } else if (setRole === 'sub-portfolio' && item.sub_portfolio) {
+          response.subPortfolio = {
+            _id: item.sub_portfolio._id,
+            name: item.sub_portfolio.name,
+          };
+        } else if (setRole === 'property' && item.property_name) {
+          response.property = {
+            _id: item.property_name._id,
+            name: item.property_name.name,
+          };
+        }
+
+        return Object.keys(response).length > 0 ? response : null;
+      })
+      .filter(Boolean);
+
+    return result;
+  } catch (error) {
+    console.error('Error fetching data:', error.message);
+    throw error;
+  }
 };

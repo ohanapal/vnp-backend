@@ -105,6 +105,7 @@ exports.getAllUsers = async (req, res) => {
     const portfolio = req.query.portfolio || null; // Individual filters
     const subPortfolio = req.query.sub_portfolio || null;
     const property = req.query.property || null;
+    const roleFilter = req.query.role || null; // Role filter for admin users only
 
     const currentUserId = req.user.id; // Assuming req.user contains logged-in user's details
     const role = req.user.role;
@@ -118,6 +119,7 @@ exports.getAllUsers = async (req, res) => {
       portfolio,
       subPortfolio,
       property,
+      roleFilter,
     );
 
     res.status(200).json(result);
@@ -171,5 +173,21 @@ exports.updateOwnProfile = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+};
+
+exports.getAllPortfoliosSubPortfoliosProperties = async (req, res) => {
+  const { role, connected_entity_id: connectedEntityIds } = req.user;
+  try {
+    const { search, setRole } = req.query;
+    const allPortfolios = await userService.getAllPortfoliosSubPortfoliosPropertiesName(
+      role,
+      connectedEntityIds,
+      search,
+      setRole,
+    );
+    return res.status(200).json(allPortfolios);
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

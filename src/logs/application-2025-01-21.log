@@ -1,3 +1,35 @@
 2025-01-21 00:23:02 [[32minfo[39m]: Login request received {"email":"mahi121.mr2@gmail.com"}
 2025-01-21 00:23:02 [[32minfo[39m]: Token generated successfully {"email":"mahi121.mr2@gmail.com","userId":"678dec3b8284394a03a8f2c3"}
 2025-01-21 00:23:02 [[32minfo[39m]: Login successful {"userId":"678dec3b8284394a03a8f2c3","email":"mahi121.mr2@gmail.com"}
+2025-01-21 00:51:01 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
+2025-01-21 00:51:01 [[33mwarn[39m]: Invalid password {"email":"smahadalichowdhury@gmail.com"}
+2025-01-21 00:51:01 [[31merror[39m]: Login failed {"email":"smahadalichowdhury@gmail.com","error":"Invalid password"}
+2025-01-21 00:51:01 [[31merror[39m]: Invalid password {"statusCode":401,"status":"fail","isOperational":true}
+2025-01-21 00:51:14 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
+2025-01-21 00:51:14 [[33mwarn[39m]: Invalid password {"email":"smahadalichowdhury@gmail.com"}
+2025-01-21 00:51:14 [[31merror[39m]: Login failed {"email":"smahadalichowdhury@gmail.com","error":"Invalid password"}
+2025-01-21 00:51:14 [[31merror[39m]: Invalid password {"statusCode":401,"status":"fail","isOperational":true}
+2025-01-21 00:51:18 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
+2025-01-21 00:51:19 [[33mwarn[39m]: Invalid password {"email":"smahadalichowdhury@gmail.com"}
+2025-01-21 00:51:19 [[31merror[39m]: Login failed {"email":"smahadalichowdhury@gmail.com","error":"Invalid password"}
+2025-01-21 00:51:19 [[31merror[39m]: Invalid password {"statusCode":401,"status":"fail","isOperational":true}
+2025-01-21 00:51:23 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
+2025-01-21 00:51:23 [[33mwarn[39m]: Invalid password {"email":"smahadalichowdhury@gmail.com"}
+2025-01-21 00:51:23 [[31merror[39m]: Login failed {"email":"smahadalichowdhury@gmail.com","error":"Invalid password"}
+2025-01-21 00:51:23 [[31merror[39m]: Invalid password {"statusCode":401,"status":"fail","isOperational":true}
+2025-01-21 00:51:29 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
+2025-01-21 00:51:30 [[33mwarn[39m]: Invalid password {"email":"smahadalichowdhury@gmail.com"}
+2025-01-21 00:51:30 [[31merror[39m]: Login failed {"email":"smahadalichowdhury@gmail.com","error":"Invalid password"}
+2025-01-21 00:51:30 [[31merror[39m]: Invalid password {"statusCode":401,"status":"fail","isOperational":true}
+2025-01-21 00:51:35 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
+2025-01-21 00:51:35 [[33mwarn[39m]: Invalid password {"email":"smahadalichowdhury@gmail.com"}
+2025-01-21 00:51:35 [[31merror[39m]: Login failed {"email":"smahadalichowdhury@gmail.com","error":"Invalid password"}
+2025-01-21 00:51:35 [[31merror[39m]: Invalid password {"statusCode":401,"status":"fail","isOperational":true}
+2025-01-21 00:52:32 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
+2025-01-21 00:52:32 [[33mwarn[39m]: Invalid password {"email":"smahadalichowdhury@gmail.com"}
+2025-01-21 00:52:32 [[31merror[39m]: Login failed {"email":"smahadalichowdhury@gmail.com","error":"Invalid password"}
+2025-01-21 00:52:32 [[31merror[39m]: Invalid password {"statusCode":401,"status":"fail","isOperational":true}
+2025-01-21 00:52:41 [[32minfo[39m]: OTP successfully sent to smahadalichowdhury@gmail.com 
+2025-01-21 00:53:37 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
+2025-01-21 00:53:37 [[32minfo[39m]: Token generated successfully {"email":"smahadalichowdhury@gmail.com","userId":"6772872d7465ba6f8c52c425"}
+2025-01-21 00:53:37 [[32minfo[39m]: Login successful {"userId":"6772872d7465ba6f8c52c425","email":"smahadalichowdhury@gmail.com"}

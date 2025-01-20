@@ -12,6 +12,7 @@ const {
   verifyUserInvitation,
   resetPassword,
   updateOwnProfile,
+  getAllPortfoliosSubPortfoliosProperties,
   sendForgetPasswordOTP,
 } = require('../controllers/userController');
 const { authMiddleware } = require('../middlewares/authMiddleware');
@@ -30,5 +31,11 @@ router.put('/update/:id', authMiddleware('admin'), updateUser); //Only admins an
 router.delete('/delete/:id', authMiddleware('admin'), deleteUser); //Only admins and managers can update users
 
 router.put('/own-profile', authMiddleware('admin', 'portfolio', 'sub-portfolio', 'property'), updateOwnProfile);
+
+router.get(
+  '/get-all',
+  authMiddleware('admin', 'sub-portfolio', 'portfolio', 'property'),
+  getAllPortfoliosSubPortfoliosProperties,
+);
 
 module.exports = router;
