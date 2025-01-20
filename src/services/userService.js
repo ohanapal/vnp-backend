@@ -334,11 +334,17 @@ exports.getAllUsers = async (page = 1, limit = 10, currentUserId, role, searchQu
   // Build the base query
   const query = {
     role: { $ne: 'admin' },
-    _id: { $ne: currentUserId }, // Exclude the current user
+    // _id: { $ne: currentUserId }, // Exclude the current user
   };
 
+  // if (role !== 'admin') {
+  //   query.invited_user = new ObjectId(currentUserId); // Filter users who were invited by the current user
+  // }
   if (role !== 'admin') {
-    query.invited_user = new ObjectId(currentUserId); // Filter users who were invited by the current user
+    query.$or = [
+      { invited_user: new ObjectId(currentUserId) }, // Users invited by the current user
+      { _id: new ObjectId(currentUserId) }, // Include the current user
+    ];
   }
 
   // Start with basic search on the user model
