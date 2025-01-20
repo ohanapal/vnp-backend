@@ -123,24 +123,120 @@ const userModel = require('../models/userModel');
 //   }
 // };
 
+// const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, filters, role, connectedEntityIds }) => {
+//   try {
+//     const skip = (page - 1) * limit; // Calculate the number of documents to skip for pagination
+
+//     // Build the query for sheetDataModel
+//     const query = {};
+
+//     if (role === 'admin') {
+//       if (search) {
+//         const matchingProperties = await propertyModel.find({ name: { $regex: search, $options: 'i' } });
+//         const matchingPropertiesIds = matchingProperties.map((property) => property._id);
+//         query.property_name = { $in: matchingPropertiesIds };
+//       }
+
+//       if (filters?.sub_portfolio) query.sub_portfolio = new ObjectId(filters.sub_portfolio);
+//       if (filters?.portfolio) query.portfolio_name = new ObjectId(filters.portfolio);
+//       if (filters?.posting_type) query.posting_type = filters.posting_type;
+//     } else {
+//       if (role === 'portfolio') {
+//         query.portfolio_name = { $in: connectedEntityIds };
+//       } else if (role === 'sub-portfolio') {
+//         query.sub_portfolio = { $in: connectedEntityIds };
+//       } else if (role === 'property') {
+//         query.property_name = { $in: connectedEntityIds };
+//       }
+
+//       if (search) {
+//         const matchingProperties = await propertyModel.find({ name: { $regex: search, $options: 'i' } });
+//         const matchingPropertiesIds = matchingProperties.map((property) => property._id);
+//         query.property_name = { $in: matchingPropertiesIds };
+//       }
+
+//       if (filters?.sub_portfolio) query.sub_portfolio = new ObjectId(filters.sub_portfolio);
+//       if (filters?.portfolio) query.portfolio_name = new ObjectId(filters.portfolio);
+//       if (filters?.posting_type) query.posting_type = filters.posting_type;
+//     }
+
+//     // Sorting
+//     const sortOptions = {};
+//     if (sortBy && sortOrder) {
+//       sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+//     }
+
+//     // Fetch sheet data
+//     const sheetData = await sheetDataModel
+//       .find(query)
+//       .populate('portfolio_name', 'name')
+//       .populate('sub_portfolio', 'name')
+//       .populate('property_name', 'name')
+//       .sort(sortOptions)
+//       .skip(skip)
+//       .limit(limit);
+
+//     // Fetch users with `role: property` and matching `connectedEntityIds`
+//     const userQuery = {
+//       role: 'property',
+//       connected_entity_id: { $in: sheetData.map((data) => data.property_name._id) },
+//     };
+//     const matchingUsers = await userModel.find(userQuery);
+//     // console.log('matches users', matchingUsers);
+
+//     // Attach user info to the sheet data
+//     const enrichedSheetData = sheetData.map((data) => {
+//       const users = matchingUsers.filter((u) => u.connected_entity_id.includes(data.property_name._id.toString()));
+//       return {
+//         ...data._doc,
+//         users: users.map((user) => ({
+//           id: user._id,
+//           name: user.name,
+//           email: user.email,
+//         })),
+//       };
+//     });
+//     // console.log('enrichedSheetData', enrichedSheetData);
+//     // Count total documents for the query
+//     const total = await sheetDataModel.countDocuments(query);
+
+//     return { data: enrichedSheetData, total };
+//   } catch (error) {
+//     throw new Error(`Error fetching data: ${error.message}`);
+//   }
+// };
+
 const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, filters, role, connectedEntityIds }) => {
   try {
     const skip = (page - 1) * limit; // Calculate the number of documents to skip for pagination
-
-    // Build the query for sheetDataModel
-    const query = {};
+    const query = {}; // Build the query for filtering data
 
     if (role === 'admin') {
+      // Admin can search by property name
       if (search) {
         const matchingProperties = await propertyModel.find({ name: { $regex: search, $options: 'i' } });
-        const matchingPropertiesIds = matchingProperties.map((property) => property._id);
-        query.property_name = { $in: matchingPropertiesIds };
+        const matchingPropertyIds = matchingProperties.map((property) => property._id);
+        query.property_name = { $in: matchingPropertyIds };
       }
 
-      if (filters?.sub_portfolio) query.sub_portfolio = new ObjectId(filters.sub_portfolio);
-      if (filters?.portfolio) query.portfolio_name = new ObjectId(filters.portfolio);
-      if (filters?.posting_type) query.posting_type = filters.posting_type;
+      // Apply filters
+      if (filters?.sub_portfolio) {
+        query.sub_portfolio = new ObjectId(filters.sub_portfolio);
+      }
+      if (filters?.portfolio) {
+        query.portfolio_name = new ObjectId(filters.portfolio);
+      }
+      if (filters?.posting_type) {
+        query.posting_type = filters.posting_type;
+      }
+      if (filters?.startDate && filters?.endDate) {
+        query.from = {
+          $gte: new Date(filters.startDate),
+          $lt: new Date(filters.endDate),
+        };
+      }
     } else {
+      // Non-admin roles filter data based on connectedEntityIds
       if (role === 'portfolio') {
         query.portfolio_name = { $in: connectedEntityIds };
       } else if (role === 'sub-portfolio') {
@@ -149,15 +245,36 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
         query.property_name = { $in: connectedEntityIds };
       }
 
+      // Apply search
       if (search) {
         const matchingProperties = await propertyModel.find({ name: { $regex: search, $options: 'i' } });
-        const matchingPropertiesIds = matchingProperties.map((property) => property._id);
-        query.property_name = { $in: matchingPropertiesIds };
+        const matchingPropertyIds = matchingProperties.map((property) => property._id);
+
+        if (role === 'property') {
+          query.property_name = {
+            $in: matchingPropertyIds.filter((id) => connectedEntityIds.includes(id.toString())),
+          };
+        } else {
+          query.property_name = { $in: matchingPropertyIds };
+        }
       }
 
-      if (filters?.sub_portfolio) query.sub_portfolio = new ObjectId(filters.sub_portfolio);
-      if (filters?.portfolio) query.portfolio_name = new ObjectId(filters.portfolio);
-      if (filters?.posting_type) query.posting_type = filters.posting_type;
+      // Apply filters
+      if (filters?.sub_portfolio) {
+        query.sub_portfolio = new ObjectId(filters.sub_portfolio);
+      }
+      if (filters?.portfolio) {
+        query.portfolio_name = new ObjectId(filters.portfolio);
+      }
+      if (filters?.posting_type) {
+        query.posting_type = filters.posting_type;
+      }
+      if (filters?.startDate && filters?.endDate) {
+        query.from = {
+          $gte: new Date(filters.startDate),
+          $lt: new Date(filters.endDate),
+        };
+      }
     }
 
     // Sorting
@@ -182,11 +299,10 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
       connected_entity_id: { $in: sheetData.map((data) => data.property_name._id) },
     };
     const matchingUsers = await userModel.find(userQuery);
-    // console.log('matches users', matchingUsers);
 
     // Attach user info to the sheet data
     const enrichedSheetData = sheetData.map((data) => {
-      const users = matchingUsers.filter((u) => u.connected_entity_id.includes(data.property_name._id.toString()));
+      const users = matchingUsers.filter((user) => user.connected_entity_id.includes(data.property_name._id.toString()));
       return {
         ...data._doc,
         users: users.map((user) => ({
@@ -196,13 +312,13 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
         })),
       };
     });
-    // console.log('enrichedSheetData', enrichedSheetData);
+
     // Count total documents for the query
     const total = await sheetDataModel.countDocuments(query);
 
     return { data: enrichedSheetData, total };
   } catch (error) {
-    throw new Error(`Error fetching data: ${error.message}`);
+    throw new Error(`Error fetching property sheet data: ${error.message}`);
   }
 };
 
