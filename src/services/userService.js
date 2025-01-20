@@ -334,7 +334,7 @@ exports.getAllUsers = async (page = 1, limit = 10, currentUserId, role, searchQu
   // Build the base query
   const query = {
     role: { $ne: 'admin' },
-    // _id: { $ne: currentUserId }, // Exclude the current user
+    _id: { $ne: currentUserId }, // Exclude the current user
   };
 
   if (role !== 'admin') {
@@ -367,6 +367,7 @@ exports.getAllUsers = async (page = 1, limit = 10, currentUserId, role, searchQu
       { name: { $regex: searchQuery, $options: 'i' } },
       { email: { $regex: searchQuery, $options: 'i' } },
       { phone: { $regex: searchQuery, $options: 'i' } },
+      { role: { $regex: searchQuery, $options: 'i' } },
       { _id: { $in: userIdsFromEntities.map((user) => user._id) } },
     ];
   }
