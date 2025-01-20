@@ -254,7 +254,7 @@ exports.sendForgetPasswordOTP = async (userData) => {
   });
 
   // Send the temporary password via email
-  const emailMessage = `Your Temporary Password is: ${tempPassword}. Please change it after login`;
+  const emailMessage = `Your Temporary Password is: ${tempPassword}`;
   const emailSubject = 'VNP';
   const emailSend = await SendEmailUtils(email, emailMessage, emailSubject);
 
