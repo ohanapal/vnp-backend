@@ -182,16 +182,21 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
       connected_entity_id: { $in: sheetData.map((data) => data.property_name._id) },
     };
     const matchingUsers = await userModel.find(userQuery);
+    // console.log('matches users', matchingUsers);
 
     // Attach user info to the sheet data
     const enrichedSheetData = sheetData.map((data) => {
-      const user = matchingUsers.find((u) => u.connected_entity_id.includes(data.property_name._id.toString()));
+      const users = matchingUsers.filter((u) => u.connected_entity_id.includes(data.property_name._id.toString()));
       return {
         ...data._doc,
-        user: user ? { id: user._id, name: user.name, email: user.email } : null,
+        users: users.map((user) => ({
+          id: user._id,
+          name: user.name,
+          email: user.email,
+        })),
       };
     });
-
+    // console.log('enrichedSheetData', enrichedSheetData);
     // Count total documents for the query
     const total = await sheetDataModel.countDocuments(query);
 
