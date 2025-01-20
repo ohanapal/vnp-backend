@@ -83,14 +83,43 @@ exports.sendForgetPasswordOTP = async (req, res) => {
   }
 };
 
+// exports.getAllUsers = async (req, res) => {
+//   try {
+//     const page = parseInt(req.query.page) || 1;
+//     const limit = parseInt(req.query.limit) || 10;
+//     const searchQuery = req.query.search || ''; // Extract search query from request
+//     const currentUserId = req.user.id; // Assuming req.user contains the logged-in user's details
+//     const role = req.user.role;
+//     const result = await userService.getAllUsers(page, limit, currentUserId, role, searchQuery);
+//     res.status(200).json(result);
+//   } catch (error) {
+//     res.status(400).json({ error: error.message });
+//   }
+// };
+
 exports.getAllUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const searchQuery = req.query.search || ''; // Extract search query from request
-    const currentUserId = req.user.id; // Assuming req.user contains the logged-in user's details
+    const searchQuery = req.query.search || ''; // Extract search query
+    const portfolio = req.query.portfolio || null; // Individual filters
+    const subPortfolio = req.query.sub_portfolio || null;
+    const property = req.query.property || null;
+
+    const currentUserId = req.user.id; // Assuming req.user contains logged-in user's details
     const role = req.user.role;
-    const result = await userService.getAllUsers(page, limit, currentUserId, role, searchQuery);
+
+    const result = await userService.getAllUsers(
+      page,
+      limit,
+      currentUserId,
+      role,
+      searchQuery,
+      portfolio,
+      subPortfolio,
+      property,
+    );
+
     res.status(200).json(result);
   } catch (error) {
     res.status(400).json({ error: error.message });
