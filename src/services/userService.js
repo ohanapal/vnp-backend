@@ -263,31 +263,111 @@ exports.sendForgetPasswordOTP = async (userData) => {
 
   // Return the result of the email send (or you could return the OTP status)
   return {
-    message: "Check Your Email for Verification Account OTP",
-    data: user
+    message: 'Check Your Email for Verification Account OTP',
+    data: user,
   };
 };
 
+// exports.getAllUsers = async (page = 1, limit = 10, currentUserId, role, searchQuery = '') => {
+//   const skip = (page - 1) * limit;
+
+//   // Build the base query
+//   const query = {
+//     role: { $ne: 'admin' },
+//     _id: { $ne: currentUserId }, // Exclude the current user
+//   };
+
+//   if (role !== 'admin') {
+//     query.invited_user = new ObjectId(currentUserId); // Filter users who were invited by the current user
+//   }
+
+//   // If a search query exists, add $or conditions
+//   if (searchQuery) {
+//     query.$or = [
+//       { name: { $regex: searchQuery, $options: 'i' } }, // Case-insensitive search by name
+//       { email: { $regex: searchQuery, $options: 'i' } }, // Case-insensitive search by email
+//       { phone: { $regex: searchQuery, $options: 'i' } }, // Case-insensitive search by phone number
+//       { connected_entity_id: { $regex: searchQuery, $options: 'i' } }, // Search within connected_entity_id
+//     ];
+//   }
+
+//   const [users, total] = await Promise.all([User.find(query).skip(skip).limit(limit).lean(), User.countDocuments(query)]);
+
+//   // Transform users to replace `connected_entity_id` with names
+//   const transformedUsers = await Promise.all(
+//     users.map(async (user) => {
+//       if (user.role === 'portfolio') {
+//         user.connected_entity_id = await Portfolio.find({
+//           _id: { $in: user.connected_entity_id },
+//         }).select('name -_id');
+//       } else if (user.role === 'property') {
+//         user.connected_entity_id = await Property.find({
+//           _id: { $in: user.connected_entity_id },
+//         }).select('name -_id');
+//       } else if (user.role === 'sub-portfolio') {
+//         user.connected_entity_id = await SubPortfolio.find({
+//           _id: { $in: user.connected_entity_id },
+//         }).select('name -_id');
+//       }
+//       // Convert connected_entity_id array of objects to an array of names
+//       user.connected_entity_id = user.connected_entity_id.map((entity) => entity.name);
+
+//       // Remove password field from the user object
+//       delete user.password;
+
+//       return user;
+//     }),
+//   );
+
+//   return {
+//     users: transformedUsers,
+//     total,
+//     page,
+//     totalPages: Math.ceil(total / limit),
+//   };
+// };
+
+// Update User
 exports.getAllUsers = async (page = 1, limit = 10, currentUserId, role, searchQuery = '') => {
   const skip = (page - 1) * limit;
 
   // Build the base query
   const query = {
     role: { $ne: 'admin' },
-    _id: { $ne: currentUserId }, // Exclude the current user
+    // _id: { $ne: currentUserId }, // Exclude the current user
   };
 
   if (role !== 'admin') {
     query.invited_user = new ObjectId(currentUserId); // Filter users who were invited by the current user
   }
 
-  // If a search query exists, add $or conditions
+  // Start with basic search on the user model
+  let userIdsFromEntities = [];
   if (searchQuery) {
+    // Search in Portfolio, Property, and SubPortfolio collections
+    const [portfolioMatches, propertyMatches, subPortfolioMatches] = await Promise.all([
+      Portfolio.find({ name: { $regex: searchQuery, $options: 'i' } }).select('_id'),
+      Property.find({ name: { $regex: searchQuery, $options: 'i' } }).select('_id'),
+      SubPortfolio.find({ name: { $regex: searchQuery, $options: 'i' } }).select('_id'),
+    ]);
+
+    // Collect all matching IDs
+    const matchedEntityIds = [
+      ...portfolioMatches.map((p) => p._id.toString()),
+      ...propertyMatches.map((p) => p._id.toString()),
+      ...subPortfolioMatches.map((p) => p._id.toString()),
+    ];
+
+    userIdsFromEntities = await User.find({
+      connected_entity_id: { $in: matchedEntityIds },
+    }).select('_id');
+
+    // Add the $or condition to search for user fields or connected entities
     query.$or = [
-      { name: { $regex: searchQuery, $options: 'i' } }, // Case-insensitive search by name
-      { email: { $regex: searchQuery, $options: 'i' } }, // Case-insensitive search by email
-      { phone: { $regex: searchQuery, $options: 'i' } }, // Case-insensitive search by phone number
-      { connected_entity_id: { $regex: searchQuery, $options: 'i' } }, // Search within connected_entity_id
+      { name: { $regex: searchQuery, $options: 'i' } },
+      { email: { $regex: searchQuery, $options: 'i' } },
+      { phone: { $regex: searchQuery, $options: 'i' } },
+      { _id: { $in: userIdsFromEntities.map((user) => user._id) } },
     ];
   }
 
@@ -296,23 +376,27 @@ exports.getAllUsers = async (page = 1, limit = 10, currentUserId, role, searchQu
   // Transform users to replace `connected_entity_id` with names
   const transformedUsers = await Promise.all(
     users.map(async (user) => {
-      if (user.role === 'portfolio') {
-        user.connected_entity_id = await Portfolio.find({
-          _id: { $in: user.connected_entity_id },
-        }).select('name -_id');
-      } else if (user.role === 'property') {
-        user.connected_entity_id = await Property.find({
-          _id: { $in: user.connected_entity_id },
-        }).select('name -_id');
-      } else if (user.role === 'sub-portfolio') {
-        user.connected_entity_id = await SubPortfolio.find({
-          _id: { $in: user.connected_entity_id },
-        }).select('name -_id');
-      }
-      // Convert connected_entity_id array of objects to an array of names
-      user.connected_entity_id = user.connected_entity_id.map((entity) => entity.name);
+      if (user.connected_entity_id && user.connected_entity_id.length > 0) {
+        let entityNames = [];
+        if (user.role === 'portfolio') {
+          entityNames = await Portfolio.find({
+            _id: { $in: user.connected_entity_id },
+          }).select('name -_id');
+        } else if (user.role === 'property') {
+          entityNames = await Property.find({
+            _id: { $in: user.connected_entity_id },
+          }).select('name -_id');
+        } else if (user.role === 'sub-portfolio') {
+          entityNames = await SubPortfolio.find({
+            _id: { $in: user.connected_entity_id },
+          }).select('name -_id');
+        }
 
-      // Remove password field from the user object
+        // Convert entity objects to an array of names
+        user.connected_entity_id = entityNames.map((entity) => entity.name);
+      }
+
+      // Remove the password field for security
       delete user.password;
 
       return user;
@@ -327,7 +411,6 @@ exports.getAllUsers = async (page = 1, limit = 10, currentUserId, role, searchQu
   };
 };
 
-// Update User
 exports.updateUser = async (userId, updateData) => {
   // Update the user in the database
   const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true });
