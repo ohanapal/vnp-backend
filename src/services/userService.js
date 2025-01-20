@@ -411,10 +411,13 @@ exports.getAllUsers = async (page = 1, limit = 10, currentUserId, role, searchQu
   );
 
   return {
-    users: transformedUsers,
-    total,
-    page,
-    totalPages: Math.ceil(total / limit),
+    success: true,
+    data: transformedUsers,
+    pagination: {
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      totalItems: total,
+    },
   };
 };
 
