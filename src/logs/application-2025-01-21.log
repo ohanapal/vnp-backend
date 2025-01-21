@@ -42,3 +42,7 @@
 2025-01-21 10:11:00 [[32minfo[39m]: Login request received {"email":"vnp@admin.com"}
 2025-01-21 10:11:00 [[32minfo[39m]: Token generated successfully {"email":"vnp@admin.com","userId":"677271b67b9759f7412b112c"}
 2025-01-21 10:11:00 [[32minfo[39m]: Login successful {"userId":"677271b67b9759f7412b112c","email":"vnp@admin.com"}
+2025-01-21 18:15:26 [[32minfo[39m]: Login request received {"email":"vnp@admin.com"}
+2025-01-21 18:15:26 [[32minfo[39m]: Token generated successfully {"email":"vnp@admin.com","userId":"677271b67b9759f7412b112c"}
+2025-01-21 18:15:26 [[32minfo[39m]: Login successful {"userId":"677271b67b9759f7412b112c","email":"vnp@admin.com"}
+2025-01-21 18:15:57 [[31merror[39m]: Can't find /api/audit/upload-audit-file on this server {"statusCode":404,"status":"fail","isOperational":true}

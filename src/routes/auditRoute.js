@@ -7,7 +7,7 @@ const {
   updateAuditDataController,
   deleteAuditDataController,
   getSingleAuditData,
-  updateAuditFiles,
+  updateAuditFilesController,
 } = require('../controllers/auditController');
 const { authMiddleware } = require('../middlewares/authMiddleware');
 const uploadS3 = require('../utils/uploadS3');
@@ -19,6 +19,6 @@ router.get('/delete-data/:id', authMiddleware('admin', 'sub-portfolio', 'portfol
 router.get('/update-data/:id', authMiddleware('admin', 'sub-portfolio', 'portfolio', 'property'), updateAuditDataController);
 router.get('/single-data/:id', authMiddleware('admin', 'sub-portfolio', 'portfolio', 'property'), getSingleAuditData);
 router.post('/upload', upload.single('file'), uploadS3.uploadFile);
-router.get('/upload-audit-file', authMiddleware('admin'), updateAuditFiles);
+router.post('/upload-audit-file', authMiddleware('admin'), updateAuditFilesController);
 
 module.exports = router;

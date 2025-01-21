@@ -1,4 +1,4 @@
-const { getAuditSheetData } = require('../services/auditService');
+const { getAuditSheetData, updateAuditFiles, updateSheetDataService } = require('../services/auditService');
 const logger = require('../utils/logger'); // Assuming logger is set up in utils/logger.js
 const AppError = require('../utils/appError');
 
@@ -124,7 +124,7 @@ const getSingleAuditData = async (req, res) => {
   }
 };
 
-const updateAuditFiles = async (req, res) => {
+const updateAuditFilesController = async (req, res) => {
   try {
     const data = req.body; // Expecting an array of objects [{ id, uploadedUrl }]
 
@@ -136,14 +136,7 @@ const updateAuditFiles = async (req, res) => {
 
     const { successfulUpdates, failedUpdates } = await updateAuditFiles(data);
 
-    res.status(200).json({
-      status: 'success',
-      message: 'Audit files update processed.',
-      data: {
-        successfulUpdates,
-        failedUpdates,
-      },
-    });
+    res.status(200).json({ data: successfulUpdates });
   } catch (error) {
     console.error('Error processing audit file updates:', error);
     res.status(500).json({
@@ -157,5 +150,5 @@ module.exports = {
   getSingleAuditData,
   deleteAuditDataController,
   updateAuditDataController,
-  updateAuditFiles,
+  updateAuditFilesController,
 };

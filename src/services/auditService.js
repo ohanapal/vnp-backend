@@ -468,8 +468,8 @@ const getSingleAuditDataService = async (id, role, connectedEntityIds) => {
   }
 };
 
+// Function to process updates
 const updateAuditFiles = async (data) => {
-  // Map over the data array and create update promises
   const updatePromises = data.map(async ({ id, uploadedUrl }) => {
     try {
       const updatedSheet = await sheetDataModel.findByIdAndUpdate(
@@ -479,7 +479,7 @@ const updateAuditFiles = async (data) => {
       );
 
       if (!updatedSheet) {
-        throw new AppError(`Sheet with ID ${id} not found.`);
+        throw new Error(`Sheet with ID ${id} not found.`);
       }
 
       return { status: 'fulfilled', id, updatedSheet };
@@ -488,21 +488,24 @@ const updateAuditFiles = async (data) => {
     }
   });
 
-  // Use Promise.allSettled to capture both fulfilled and rejected results
+  // Use Promise.allSettled to ensure we capture all outcomes
   const results = await Promise.allSettled(updatePromises);
 
-  // Separate successful and failed updates for easier handling/logging
-  const successfulUpdates = results.filter((result) => result.status === 'fulfilled').map((result) => result.value);
+  // Parse results to separate successes and failures
+  const successfulUpdates = results
+    .filter((result) => result.status === 'fulfilled')
+    .map((result) => result.value);
 
   const failedUpdates = results
     .filter((result) => result.status === 'rejected')
     .map((result) => ({
-      id: result.reason.id,
-      error: result.reason.error,
+      id: result.reason?.id || 'Unknown',
+      error: result.reason?.error || 'Unknown error',
     }));
 
   return { successfulUpdates, failedUpdates };
 };
+
 
 module.exports = {
   getAuditSheetData,

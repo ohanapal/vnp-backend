@@ -12,3 +12,4 @@
 2025-01-21 00:51:35 [[31merror[39m]: Invalid password {"statusCode":401,"status":"fail","isOperational":true}
 2025-01-21 00:52:32 [[31merror[39m]: Login failed {"email":"smahadalichowdhury@gmail.com","error":"Invalid password"}
 2025-01-21 00:52:32 [[31merror[39m]: Invalid password {"statusCode":401,"status":"fail","isOperational":true}
+2025-01-21 18:15:57 [[31merror[39m]: Can't find /api/audit/upload-audit-file on this server {"statusCode":404,"status":"fail","isOperational":true}
