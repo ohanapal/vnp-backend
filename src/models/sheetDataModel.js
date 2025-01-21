@@ -7,6 +7,9 @@ const sheetDataSchema = new mongoose.Schema(
     portfolio_name: { type: mongoose.Schema.Types.ObjectId, ref: 'Portfolio', required: true }, // Portfolio Name
     sub_portfolio: { type: mongoose.Schema.Types.ObjectId, ref: 'SubPortfolio' }, // Sub Portfolio
     property_name: { type: mongoose.Schema.Types.ObjectId, ref: 'Property', required: true }, // Property Name
+    audit_uploaded_file: {
+      type: String, // Audit Uploaded File Path
+    },
     from: {
       type: Date,
     }, // From Date

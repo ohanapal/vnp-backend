@@ -48,6 +48,10 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    can_download: {
+      type: Boolean,
+      default: false,
+    },
     // Other user-specific fields
   },
   {

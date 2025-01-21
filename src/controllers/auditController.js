@@ -123,9 +123,39 @@ const getSingleAuditData = async (req, res) => {
     }
   }
 };
+
+const updateAuditFiles = async (req, res) => {
+  try {
+    const data = req.body; // Expecting an array of objects [{ id, uploadedUrl }]
+
+    if (!Array.isArray(data) || data.length === 0) {
+      return res.status(400).json({
+        error: 'Invalid input: Request body should be a non-empty array.',
+      });
+    }
+
+    const { successfulUpdates, failedUpdates } = await updateAuditFiles(data);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Audit files update processed.',
+      data: {
+        successfulUpdates,
+        failedUpdates,
+      },
+    });
+  } catch (error) {
+    console.error('Error processing audit file updates:', error);
+    res.status(500).json({
+      error: 'Internal server error. Please try again later.',
+    });
+  }
+};
+
 module.exports = {
   sheetDataController,
   getSingleAuditData,
   deleteAuditDataController,
   updateAuditDataController,
+  updateAuditFiles,
 };

@@ -468,10 +468,46 @@ const getSingleAuditDataService = async (id, role, connectedEntityIds) => {
   }
 };
 
+const updateAuditFiles = async (data) => {
+  // Map over the data array and create update promises
+  const updatePromises = data.map(async ({ id, uploadedUrl }) => {
+    try {
+      const updatedSheet = await sheetDataModel.findByIdAndUpdate(
+        id,
+        { audit_uploaded_file: uploadedUrl },
+        { new: true, runValidators: true },
+      );
+
+      if (!updatedSheet) {
+        throw new AppError(`Sheet with ID ${id} not found.`);
+      }
+
+      return { status: 'fulfilled', id, updatedSheet };
+    } catch (error) {
+      return { status: 'rejected', id, error: error.message };
+    }
+  });
+
+  // Use Promise.allSettled to capture both fulfilled and rejected results
+  const results = await Promise.allSettled(updatePromises);
+
+  // Separate successful and failed updates for easier handling/logging
+  const successfulUpdates = results.filter((result) => result.status === 'fulfilled').map((result) => result.value);
+
+  const failedUpdates = results
+    .filter((result) => result.status === 'rejected')
+    .map((result) => ({
+      id: result.reason.id,
+      error: result.reason.error,
+    }));
+
+  return { successfulUpdates, failedUpdates };
+};
 
 module.exports = {
   getAuditSheetData,
   getSingleAuditDataService,
   deleteAuditDataService,
   updateAuditDataService,
+  updateAuditFiles,
 };
