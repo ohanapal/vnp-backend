@@ -659,24 +659,18 @@ exports.getAllPortfoliosSubPortfoliosPropertiesName = async (role, connectedEnti
       .map((item) => {
         if (setRole === 'portfolio' && item.portfolio_name) {
           return {
-            portfolio: {
-              _id: item.portfolio_name._id,
-              name: item.portfolio_name.name,
-            },
+            _id: item.portfolio_name._id,
+            name: item.portfolio_name.name,
           };
         } else if (setRole === 'sub-portfolio' && item.sub_portfolio) {
           return {
-            subPortfolio: {
-              _id: item.sub_portfolio._id,
-              name: item.sub_portfolio.name,
-            },
+            _id: item.sub_portfolio._id,
+            name: item.sub_portfolio.name,
           };
         } else if (setRole === 'property' && item.property_name) {
           return {
-            property: {
-              _id: item.property_name._id,
-              name: item.property_name.name,
-            },
+            _id: item.property_name._id,
+            name: item.property_name.name,
           };
         }
         return null;
@@ -684,16 +678,12 @@ exports.getAllPortfoliosSubPortfoliosPropertiesName = async (role, connectedEnti
       .filter(Boolean); // Remove null values
 
     // Remove duplicates based on `_id`
-    const uniqueResult = Array.from(
-      new Map(result.map((item) => [item[Object.keys(item)[0]]._id.toString(), item])).values(),
-    );
+    const uniqueResult = Array.from(new Map(result.map((item) => [item._id.toString(), item])).values());
 
     // Apply search filter if a search term is provided
     const filteredResult = search
       ? uniqueResult.filter((item) => {
-          const valuesToSearch = Object.values(item)
-            .map((obj) => obj.name.toLowerCase())
-            .join(' ');
+          const valuesToSearch = `${item.name.toLowerCase()}`;
           return valuesToSearch.includes(search.toLowerCase());
         })
       : uniqueResult;
@@ -704,6 +694,7 @@ exports.getAllPortfoliosSubPortfoliosPropertiesName = async (role, connectedEnti
     throw error;
   }
 };
+
 
 
 
