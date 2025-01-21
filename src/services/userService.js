@@ -113,7 +113,7 @@ const getAllowedRolesForInviter = (currentUserRole) => {
   }
 };
 exports.inviteUser = async (userData, id, currentUserRole) => {
-  const { name, email, role, connected_entity_id } = userData;
+  const { name, email,download_report, role, connected_entity_id } = userData;
 
   const allowedRoles = getAllowedRolesForInviter(currentUserRole);
   if (!allowedRoles.includes(role)) {
@@ -142,6 +142,7 @@ exports.inviteUser = async (userData, id, currentUserRole) => {
     name: name,
     password: tempPassword,
     email,
+    download_report,
     invited_user: id,
     connected_entity_id,
   });

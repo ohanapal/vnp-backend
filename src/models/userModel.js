@@ -48,7 +48,7 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    can_download: {
+    download_report: {
       type: Boolean,
       default: false,
     },
