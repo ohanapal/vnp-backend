@@ -623,58 +623,9 @@ exports.getAllPortfoliosSubPortfoliosPropertiesName = async (role, connectedEnti
   try {
     const query = {};
 
-    // Build search query
-    if (search) {
-      const searchRegex = { $regex: search, $options: 'i' };
-
-      if (role === 'property') {
-        const matchingProperties = await Property.find({ name: searchRegex });
-        // console.log('matchingProperties:', matchingProperties);
-
-        const matchingPropertyIds = matchingProperties.map((property) => property._id);
-        // console.log('matchingPropertyIds:', matchingPropertyIds);
-
-        query.property_name = {
-          $in: matchingPropertyIds.filter((_id) => connectedEntityIds.includes(_id.toString())),
-        };
-
-        // console.log('connectedEntityIds', connectedEntityIds);
-        console.log('query', query);
-      } else if (role === 'sub-portfolio') {
-        // Search for sub-portfolios
-        const matchingSubPortfolios = await subPortfolioModel.find({ name: searchRegex });
-        const matchingSubPortfolioIds = matchingSubPortfolios.map((subPortfolio) => subPortfolio._id);
-
-        query.sub_portfolio = {
-          $in: matchingSubPortfolioIds.filter((id) => connectedEntityIds.includes(id.toString())),
-        };
-      } else if (role === 'portfolio') {
-        // Search for portfolios
-        const matchingPortfolios = await portfolioModel.find({ name: searchRegex });
-        const matchingPortfolioIds = matchingPortfolios.map((portfolio) => portfolio._id);
-
-        query.portfolio_name = {
-          $in: matchingPortfolioIds.filter((id) => connectedEntityIds.includes(id.toString())),
-        };
-        console.log('query portfolio' , query);
-      } else {
-        // For admin or other roles, search across all fields
-        query.$or = [
-          { 'portfolio_name.name': searchRegex },
-          { 'sub_portfolio.name': searchRegex },
-          { 'property_name.name': searchRegex },
-        ];
-      }
-    }
-
-
-
     // Apply role-based filtering
     if (setRole) {
       switch (role) {
-        case 'admin':
-          // Admin can access everything, no filtering needed
-          break;
         case 'portfolio':
           query.portfolio_name = { $in: connectedEntityIds };
           break;
@@ -684,50 +635,76 @@ exports.getAllPortfoliosSubPortfoliosPropertiesName = async (role, connectedEnti
         case 'property':
           query.property_name = { $in: connectedEntityIds };
           break;
+        case 'admin':
         default:
-          throw new Error('Invalid role');
+          break; // No filtering for admin
       }
     }
 
+    // Fetch only the fields we need from MongoDB
+    const projection = {
+      portfolio_name: setRole === 'portfolio' ? 1 : 0,
+      sub_portfolio: setRole === 'sub-portfolio' ? 1 : 0,
+      property_name: setRole === 'property' ? 1 : 0,
+    };
 
-    // Fetch data with query and populate
     const matchedData = await sheetDataModel
-      .find(query)
+      .find(query, projection)
       .populate({ path: 'portfolio_name', select: 'name' })
       .populate({ path: 'sub_portfolio', select: 'name' })
       .populate({ path: 'property_name', select: 'name' });
 
-    console.log('matchedData', matchedData)
-
-    // Format the response based on setRole
+    // Map the results to the desired format
     const result = matchedData
       .map((item) => {
-        const response = {};
-
         if (setRole === 'portfolio' && item.portfolio_name) {
-          response.portfolio = {
-            _id: item.portfolio_name._id,
-            name: item.portfolio_name.name,
+          return {
+            portfolio: {
+              _id: item.portfolio_name._id,
+              name: item.portfolio_name.name,
+            },
           };
         } else if (setRole === 'sub-portfolio' && item.sub_portfolio) {
-          response.subPortfolio = {
-            _id: item.sub_portfolio._id,
-            name: item.sub_portfolio.name,
+          return {
+            subPortfolio: {
+              _id: item.sub_portfolio._id,
+              name: item.sub_portfolio.name,
+            },
           };
         } else if (setRole === 'property' && item.property_name) {
-          response.property = {
-            _id: item.property_name._id,
-            name: item.property_name.name,
+          return {
+            property: {
+              _id: item.property_name._id,
+              name: item.property_name.name,
+            },
           };
         }
-
-        return Object.keys(response).length > 0 ? response : null;
+        return null;
       })
-      .filter(Boolean);
+      .filter(Boolean); // Remove null values
 
-    return result;
+    // Remove duplicates based on `_id`
+    const uniqueResult = Array.from(
+      new Map(result.map((item) => [item[Object.keys(item)[0]]._id.toString(), item])).values(),
+    );
+
+    // Apply search filter if a search term is provided
+    const filteredResult = search
+      ? uniqueResult.filter((item) => {
+          const valuesToSearch = Object.values(item)
+            .map((obj) => obj.name.toLowerCase())
+            .join(' ');
+          return valuesToSearch.includes(search.toLowerCase());
+        })
+      : uniqueResult;
+
+    return filteredResult;
   } catch (error) {
     console.error('Error fetching data:', error.message);
     throw error;
   }
 };
+
+
+
+
