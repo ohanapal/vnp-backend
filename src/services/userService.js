@@ -101,13 +101,13 @@ exports.loginUser = async (userData) => {
 const getAllowedRolesForInviter = (currentUserRole) => {
   switch (currentUserRole) {
     case 'admin':
-      return ['portfolio', 'sub-portfolio', 'property']; // Admin can invite all roles
+      return ['admin','portfolio', 'sub-portfolio', 'property']; // Admin can invite all roles
     case 'portfolio':
-      return ['sub-portfolio', 'property']; // Portfolio can invite sub portfolio and property
+      return ['portfolio','sub-portfolio', 'property']; // Portfolio can invite sub portfolio and property
     case 'sub-portfolio':
-      return ['property']; // Sub portfolio can only invite property
+      return ['sub-portfolio','property']; // Sub portfolio can only invite property
     case 'property':
-      return []; // Property cannot invite anyone
+      return ['property']; // Property cannot invite anyone
     default:
       return []; // Unknown role, no one can be invited
   }
