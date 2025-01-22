@@ -12,6 +12,7 @@ const sheetDataController = async (req, res) => {
       sortBy = 'createdAt',
       sortOrder = 'desc',
       property,
+      portfolio,
       sub_portfolio,
       posting_type,
       startDate,
@@ -21,6 +22,7 @@ const sheetDataController = async (req, res) => {
     logger.info('Received request to fetch sheet data', { user: req.user, query: req.query });
     // Build the filters object
     const filters = {};
+    if (portfolio) filters.portfolio = portfolio;
     if (sub_portfolio) filters.sub_portfolio = sub_portfolio;
     if (posting_type) filters.posting_type = posting_type;
     if (property) filters.property = property;

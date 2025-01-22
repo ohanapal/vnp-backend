@@ -24,6 +24,15 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
         query.portfolio_name = { $in: matchingPortfolioIds };
       }
 
+      // apply portfolio filter
+      if (filters?.portfolio) {
+        try {
+          query.portfolio_name = new ObjectId(filters?.portfolio);
+        } catch (error) {
+          logger.error('Error parsing portfolio filter', { error: error.message });
+          throw new AppError('Invalid portfolio filter', 400);
+        }
+      }
       // apply sub_portfolio filter
       if (filters?.sub_portfolio) {
         try {
@@ -123,6 +132,30 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
       }
 
       // Apply other filters (sub_portfolio, posting_type)
+      if (filters?.portfolio) {
+        try {
+          if (role === 'portfolio') {
+            query.portfolio_name = new ObjectId(filters?.portfolio);
+            // Only return portfolios in the search and user's connectedEntityIds
+            query.portfolio_name = { $in: connectedEntityIds };
+          } else if (role === 'sub-portfolio') {
+            query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
+
+            // Only return sub-portfolios connected to the user
+            query.portfolio_name = { $in: connectedEntityIds };
+          } else if (role === 'property') {
+            // Ensure properties belong to the user's connectedEntityIds
+            query.property_name = { $in: connectedEntityIds };
+
+            // Additionally, filter by portfolios from the search
+            query.portfolio_name = new ObjectId(filters?.sub_portfolio);
+          }
+        } catch (error) {
+          console.error('Error fetching portfolio:', error);
+          throw new AppError(error.message);
+        }
+      }
+
       if (filters?.sub_portfolio) {
         try {
           if (role === 'portfolio') {
