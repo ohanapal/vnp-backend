@@ -433,9 +433,17 @@ exports.getAllUsers = async (
 
   // console.log('Initial query object:', query);
 
+  // if (role !== 'admin') {
+  //   query.$or = [{ invited_user: new ObjectId(currentUserId) }, { _id: new ObjectId(currentUserId) }];
+  //   // console.log('Query after role check:', query);
+  // }
+
   if (role !== 'admin') {
     query.$or = [{ invited_user: new ObjectId(currentUserId) }, { _id: new ObjectId(currentUserId) }];
-    // console.log('Query after role check:', query);
+
+    // Exclude if role is 'admin'
+    query.role = { $ne: 'admin' };
+    // console.log('Query after excluding admin:', query);
   }
 
   // If there's a search query, apply the search to the collections and user fields
