@@ -4,6 +4,8 @@ const AppError = require('../utils/appError');
 const { ObjectId } = require('mongodb');
 const portfolioModel = require('../models/portfolioModel');
 const logger = require('../utils/logger'); // Assuming logger is set up in utils/logger.js
+const axios = require('axios'); // Ensure axios is installed and imported
+
 
 const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filters, role, connectedEntityIds }) => {
   try {
@@ -413,33 +415,44 @@ const updateAuditDataService = async (id, data, role, connectedEntityIds) => {
   }
 };
 
-const deleteAuditDataService = async (id, role, connectedEntityIds) => {
-  // const { role, connectedEntityIds } = user;
 
+const deleteSheetDataService = async (id, role, connectedEntityIds) => {
   // Find the sheet data by ID
   const sheetData = await sheetDataModel.findById(id);
   if (!sheetData) {
     throw new Error('Sheet data not found');
   }
 
-  // Admin can delete any sheet data
-  if (role === 'admin') {
-    await sheetDataModel.findByIdAndDelete(id);
-    return 'Sheet data deleted successfully';
-  } else {
-    // Non-admin roles should only be able to delete based on connectedEntityIds
-    if (
-      (role === 'portfolio' && connectedEntityIds?.includes(sheetData.portfolio_name.toString())) ||
-      (role === 'sub-portfolio' && connectedEntityIds?.includes(sheetData.sub_portfolio.toString())) ||
-      (role === 'property' && connectedEntityIds?.includes(sheetData.property_name.toString()))
-    ) {
-      await sheetDataModel.findByIdAndDelete(id);
-      return 'Sheet data deleted successfully';
-    } else {
-      throw new Error('You are not authorized to delete this data');
-    }
+  const { unique_id } = sheetData;
+
+  // Delete the row from Google Sheets via the API
+  try {
+    await deleteRow(unique_id);
+  } catch (error) {
+    console.error('Error deleting row from Google Sheets:', error.message);
+    throw new Error('Failed to delete row from Google Sheets');
   }
+
+  // After the row is deleted from Google Sheets, remove the sheet data from your model
+  await sheetDataModel.findByIdAndDelete(id);
+
+  return 'Sheet data deleted successfully';
 };
+
+async function deleteRow(uniqueId) {
+  const scriptUrl = process.env.SHEET_SCRIPT_URL; // Replace with your Web App URL
+
+  // console.log('Script URL: ', process.env.SHEET_SCRIPT_URL);
+  try {
+    const response = await axios.post(scriptUrl, { uniqueId });
+    console.log('Google Apps Script Response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error calling Google Apps Script API:', error.message);
+    throw error; // Re-throwing error so the calling function can handle it
+  }
+}
+
 
 const getSingleAuditDataService = async (id, role, connectedEntityIds) => {
   const sheetData = await sheetDataModel.findById(id).populate('portfolio_name sub_portfolio property_name');
@@ -492,9 +505,7 @@ const updateAuditFiles = async (data) => {
   const results = await Promise.allSettled(updatePromises);
 
   // Parse results to separate successes and failures
-  const successfulUpdates = results
-    .filter((result) => result.status === 'fulfilled')
-    .map((result) => result.value);
+  const successfulUpdates = results.filter((result) => result.status === 'fulfilled').map((result) => result.value);
 
   const failedUpdates = results
     .filter((result) => result.status === 'rejected')
@@ -506,11 +517,10 @@ const updateAuditFiles = async (data) => {
   return { successfulUpdates, failedUpdates };
 };
 
-
 module.exports = {
   getAuditSheetData,
   getSingleAuditDataService,
-  deleteAuditDataService,
+  deleteSheetDataService,
   updateAuditDataService,
   updateAuditFiles,
 };

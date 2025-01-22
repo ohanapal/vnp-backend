@@ -1,4 +1,4 @@
-const { getAuditSheetData, updateAuditFiles, updateSheetDataService } = require('../services/auditService');
+const { getAuditSheetData, updateAuditFiles,deleteSheetDataService, updateSheetDataService } = require('../services/auditService');
 const logger = require('../utils/logger'); // Assuming logger is set up in utils/logger.js
 const AppError = require('../utils/appError');
 
