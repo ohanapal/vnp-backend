@@ -15,7 +15,7 @@ const router = express.Router();
 
 // Define the route
 router.get('/get-data', authMiddleware('admin', 'sub-portfolio', 'portfolio', 'property'), sheetDataController);
-router.get('/delete-data/:id', authMiddleware('admin', 'sub-portfolio', 'portfolio', 'property'), deleteAuditDataController);
+router.delete('/delete-data/:id', authMiddleware('admin'), deleteAuditDataController);
 router.get('/update-data/:id', authMiddleware('admin', 'sub-portfolio', 'portfolio', 'property'), updateAuditDataController);
 router.get('/single-data/:id', authMiddleware('admin', 'sub-portfolio', 'portfolio', 'property'), getSingleAuditData);
 router.post('/upload', upload.single('file'), uploadS3.uploadFile);
