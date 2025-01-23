@@ -11,10 +11,23 @@ const parseCurrency = (value) => {
 const getRevenueMetrics = async (role, connectedEntityIds, startDate, endDate, propertyName) => {
   // Fetch and populate data
   const query = {};
+  // if (startDate || endDate) {
+  //   query.from = {};
+  //   if (startDate) query.from.$gte = new Date(startDate);
+  //   if (endDate) query.from.$lte = new Date(endDate);
+  // }
+
   if (startDate || endDate) {
-    query.from = {};
-    if (startDate) query.from.$gte = new Date(startDate);
-    if (endDate) query.from.$lte = new Date(endDate);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    console.log('Adding date range', start, end);
+
+    // Apply the overlap logic
+    query.$and = [
+      { from: { $lte: end } }, // Database range starts before the query range ends
+      { to: { $gte: start } }, // Database range ends after the query range starts
+    ];
   }
 
   const data = await SheetData.find(query).populate('portfolio_name').populate('property_name').sort({ from: 1 });
@@ -110,7 +123,10 @@ const getStatusDistribution = async (role, connectedEntityIds, startDate, endDat
       const start = new Date(startDate);
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999); // Set the end time to the end of the day
-      filter.from = { $gte: start, $lte: end }; // Filter for the specified date range
+      filter.$and = [
+        { from: { $lte: end } }, // Database range starts before the query range ends
+        { to: { $gte: start } }, // Database range ends after the query range starts
+      ];
     }
 
     // Fetch data from the database based on the filter
@@ -308,129 +324,6 @@ const getOTAPerformance = async (role, connectedEntityIds, startDate, endDate) =
   return { otaData };
 };
 
-// const getPropertyPerformance = async (role, connectedEntityIds, startDate, endDate) => {
-//   const filter = {};
-
-//   // console.log('Received parameters:', { role, connectedEntityIds, startDate, endDate });
-
-//   // If date range is provided, filter the data based on the date range
-//   if (startDate && endDate) {
-//     const start = new Date(startDate);
-//     const end = new Date(endDate);
-//     end.setHours(23, 59, 59, 999); // Set the end time to the end of the day
-//     filter.from = { $gte: start, $lte: end };
-//     // console.log('Applied date range filter:', filter.from);
-//   }
-
-//   // Apply filters based on role
-//   if (role === 'portfolio') {
-//     filter.portfolio_name = { $in: connectedEntityIds };
-//   } else if (role === 'sub-portfolio') {
-//     filter.sub_portfolio = { $in: connectedEntityIds };
-//   } else if (role === 'property') {
-//     filter.property_name = { $in: connectedEntityIds };
-//   }
-//   // console.log('Final filter applied:', filter);
-//   // return;
-
-//   try {
-//     // Fetch necessary fields only
-//     const data = await SheetData.find(filter, {
-//       property_name: 1,
-//       portfolio_name: 1,
-//       'expedia.amount_collectable': 1,
-//       'expedia.amount_confirmed': 1,
-//       'booking.amount_collectable': 1,
-//       'booking.amount_confirmed': 1,
-//       'agoda.amount_collectable': 1,
-//       'agoda.amount_confirmed': 1,
-//     })
-//       .populate('portfolio_name', 'name')
-//       .populate('property_name', 'name')
-//       .lean();
-
-//     // console.log('Fetched data from database:', data[0]);
-//     // return;
-
-//     // Helper function to clean and parse amounts
-//     const parseAmount = (value) => {
-//       if (!value) return 0;
-//       const cleanedValue = value.trim().replace(/[^0-9.-]+/g, '');
-//       const parsedValue = parseFloat(cleanedValue);
-//       // console.log('Parsed amount:', { original: value, parsed: parsedValue });
-//       return isNaN(parsedValue) ? 0 : parsedValue;
-//     };
-
-//     // Aggregate data for portfolios
-//     const portfolioMetrics = data.reduce((acc, item) => {
-//       const portfolioName = item?.portfolio_name || 'Unknown Portfolio';
-//       const propertyName = item?.property_name?.name || 'Unknown Property';
-
-//       // console.log('Processing item:', { portfolioName, propertyName });
-//       // return;
-
-//       // Initialize portfolio if not present
-//       if (!acc[portfolioName]) {
-//         acc[portfolioName] = {
-//           properties: {},
-//           reportedAmount: 0,
-//           claimedAmount: 0,
-//         };
-//         // console.log('Initialized new portfolio:', portfolioName);
-//       }
-
-//       // Initialize property if not present under the portfolio
-//       if (!acc[portfolioName].properties[propertyName]) {
-//         acc[portfolioName].properties[propertyName] = { reportedAmount: 0, claimedAmount: 0 };
-//         // console.log('Initialized new property:', propertyName);
-//       }
-//       // return;
-
-//       // Aggregate data for the property
-//       acc[portfolioName].properties[propertyName].reportedAmount +=
-//         parseAmount(item.expedia?.amount_collectable) +
-//         parseAmount(item.booking?.amount_collectable) +
-//         parseAmount(item.agoda?.amount_collectable);
-//       acc[portfolioName].properties[propertyName].claimedAmount +=
-//         parseAmount(item.expedia?.amount_confirmed) +
-//         parseAmount(item.booking?.amount_confirmed) +
-//         parseAmount(item.agoda?.amount_confirmed);
-
-//       // console.log('Updated property metrics:', acc[portfolioName].properties[propertyName]);
-//       // return;
-
-//       // Update portfolio-level totals
-//       // acc[portfolioName].reportedAmount += acc[portfolioName].properties[propertyName].reportedAmount;
-//       // acc[portfolioName].claimedAmount += acc[portfolioName].properties[propertyName].claimedAmount;
-
-//       // console.log('Updated portfolio metrics:', acc[portfolioName]);
-
-//       return acc;
-//     }, {});
-
-//     // console.log('Aggregated portfolio metrics:', portfolioMetrics);
-
-//     // Format the response
-//     const portfolioData = Object.entries(portfolioMetrics).map(([portfolioName, metrics]) => ({
-//       // portfolioName,
-//       properties: Object.entries(metrics.properties).map(([propertyName, propertyMetrics]) => ({
-//         propertyName,
-//         amountCollectable: propertyMetrics.reportedAmount.toFixed(2),
-//         amountConfirmed: propertyMetrics.claimedAmount.toFixed(2),
-//       })),
-//       // totalCollectable: metrics.reportedAmount.toFixed(2),
-//       // totalConfirmed: metrics.claimedAmount.toFixed(2),
-//     }));
-
-//     // console.log('Formatted portfolio data:', portfolioData);
-
-//     return portfolioData;
-//   } catch (error) {
-//     console.error('Error while fetching or processing data:', error);
-//     throw error;
-//   }
-// };
-
 const getPropertyPerformance = async (role, connectedEntityIds, startDate, endDate, sub_portfolio, posting_type) => {
   const filter = {};
 
@@ -438,7 +331,10 @@ const getPropertyPerformance = async (role, connectedEntityIds, startDate, endDa
     const start = new Date(startDate);
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999); // Set the end time to the end of the day
-    filter.from = { $gte: start, $lte: end };
+    filter.$and = [
+      { from: { $lte: end } }, // Database range starts before the query range ends
+      { to: { $gte: start } }, // Database range ends after the query range starts
+    ];
   }
 
   if (sub_portfolio) {
@@ -524,7 +420,10 @@ const getPortfolioPerformance = async (
     const start = new Date(startDate);
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999); // Set the end time to the end of the day
-    filter.from = { $gte: start, $lte: end };
+    filter.$and = [
+      { from: { $lte: end } }, // Database range starts before the query range ends
+      { to: { $gte: start } }, // Database range ends after the query range starts
+    ];
   }
 
   if (role === 'portfolio') {

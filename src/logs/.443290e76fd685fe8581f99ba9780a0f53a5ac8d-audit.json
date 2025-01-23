@@ -59,6 +59,11 @@
             "date": 1737530760693,
             "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-01-22.log",
             "hash": "cb9a58621f7a73d58810211630ec098bd061c43e5ff418a2366d01ba29141347"
+        },
+        {
+            "date": 1737606134186,
+            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-01-23.log",
+            "hash": "73992bb3796280be05a87511e03371c897527a1ee00e310efb461d9723ebca29"
         }
     ],
     "hashType": "sha256"

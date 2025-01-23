@@ -12,7 +12,6 @@ const AppError = require('./src/utils/appError');
 const globalErrorHanlder = require('./src/controllers/errorController');
 
 //route import
-const tourRoute = require('./src/routes/tourRoute');
 const userRoute = require('./src/routes/userRoute');
 const sheetCRUDRoute = require('./src/routes/sheetCRUDRoute');
 const propertiesRoute = require("./src/routes/propertiesRoute")
@@ -68,7 +67,6 @@ app.use(compression()); // this is going to compress all the text that is sent t
 //ROUTES
 
 // app.use("/", viewRouter);
-app.use('/api/v1/tours', tourRoute);
 app.use('/api/users', userRoute);
 app.use('/api/sheet', sheetCRUDRoute);
 app.use('/api/dashboard', analyticsRoute);

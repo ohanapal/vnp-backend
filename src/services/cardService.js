@@ -117,7 +117,6 @@ const moment = require('moment');
 //   }
 // };
 
-
 const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, startDate, endDate) => {
   try {
     let query = {};
@@ -126,8 +125,15 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
+      console.log('Adding date range', start, end);
 
-      query.$and = [{ from: { $gte: start } }, { to: { $lte: end } }];
+      // query.$and = [{ from: { $gte: start } }, { to: { $lte: end } }];
+      query = {
+        $and: [
+          { from: { $lte: end } }, // Database range starts before the query range ends
+          { to: { $gte: start } }, // Database range ends after the query range starts
+        ],
+      };
     }
 
     if (role !== 'admin') {

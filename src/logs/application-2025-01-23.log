@@ -1,0 +1,9 @@
+2025-01-23 16:55:15 [[32minfo[39m]: Login request received {"email":"vnp@admin.com"}
+2025-01-23 16:55:16 [[32minfo[39m]: Token generated successfully {"email":"vnp@admin.com","userId":"677271b67b9759f7412b112c"}
+2025-01-23 16:55:16 [[32minfo[39m]: Login successful {"userId":"677271b67b9759f7412b112c","email":"vnp@admin.com"}
+2025-01-23 17:23:40 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
+2025-01-23 17:23:40 [[32minfo[39m]: Token generated successfully {"email":"smahadalichowdhury@gmail.com","userId":"6790d033c31c6351ce39d82d"}
+2025-01-23 17:23:40 [[32minfo[39m]: Login successful {"userId":"6790d033c31c6351ce39d82d","email":"smahadalichowdhury@gmail.com"}
+2025-01-23 17:25:43 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
+2025-01-23 17:25:43 [[32minfo[39m]: Token generated successfully {"email":"smahadalichowdhury@gmail.com","userId":"6790d033c31c6351ce39d82d"}
+2025-01-23 17:25:43 [[32minfo[39m]: Login successful {"userId":"6790d033c31c6351ce39d82d","email":"smahadalichowdhury@gmail.com"}

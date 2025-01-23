@@ -1,17 +1,19 @@
 const { calculateMetrics } = require('../services/cardService');
 
 const getMetrics = async (req, res) => {
+  // console.log('getMetrics requested', req);
   try {
-    const { selectedPortfolio, startdate: startDate, enddate: endDate } = req.query;
+    const { selectedPortfolio, startdate, enddate } = req.query;
 
+    // console.log('getMetrics date', startdate, enddate);
     // If dates are not both provided, return all the data
-    if ((startDate && !endDate) || (!startDate && endDate)) {
+    if ((startdate && !enddate) || (!startdate && enddate)) {
       return res.status(400).json({ error: 'Both startdate and enddate must be provided together.' });
     }
 
     const { role, connected_entity_id: connectedEntityIds } = req.user;
 
-    const metrics = await calculateMetrics(role, connectedEntityIds, selectedPortfolio, startDate, endDate);
+    const metrics = await calculateMetrics(role, connectedEntityIds, selectedPortfolio, startdate, enddate);
     res.status(200).json(metrics);
   } catch (error) {
     console.error('Error in getMetrics:', error);

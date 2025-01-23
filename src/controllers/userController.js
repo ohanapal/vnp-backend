@@ -109,6 +109,7 @@ exports.getAllUsers = async (req, res) => {
 
     const currentUserId = req.user.id; // Assuming req.user contains logged-in user's details
     const role = req.user.role;
+    const { connected_entity_id: connectedEntityIds } = req.user;
 
     const result = await userService.getAllUsers(
       page,
@@ -120,6 +121,7 @@ exports.getAllUsers = async (req, res) => {
       subPortfolio,
       property,
       roleFilter,
+      connectedEntityIds,
     );
 
     res.status(200).json(result);
