@@ -21,3 +21,7 @@
 2025-02-03 14:12:17 [[32minfo[39m]: Building query for fetching sheet data {"page":1,"limit":3,"filters":{"nextAuditId":"677f99f7c6618c7d08094c7f,677f99f7c6618c7d08094c80"},"role":"portfolio"}
 2025-02-03 14:12:17 [[32minfo[39m]: Query executed successfully {"total":2}
 2025-02-03 14:12:17 [[32minfo[39m]: Sheet data fetched successfully {"totalItems":2}
+2025-02-03 16:05:12 [[31merror[39m]: Unauthorized {"statusCode":401,"status":"fail","isOperational":true}
+2025-02-03 16:05:59 [[32minfo[39m]: Login request received {"email":"vnp@admin.com"}
+2025-02-03 16:05:59 [[32minfo[39m]: Token generated successfully {"email":"vnp@admin.com","userId":"677271b67b9759f7412b112c"}
+2025-02-03 16:05:59 [[32minfo[39m]: Login successful {"userId":"677271b67b9759f7412b112c","email":"vnp@admin.com"}
