@@ -1,7 +1,0 @@
-2025-01-17 12:52:16 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
-2025-01-17 12:52:16 [[33mwarn[39m]: Invalid password {"email":"smahadalichowdhury@gmail.com"}
-2025-01-17 12:52:16 [[31merror[39m]: Login failed {"email":"smahadalichowdhury@gmail.com","error":"Invalid password"}
-2025-01-17 12:52:16 [[31merror[39m]: Invalid password {"statusCode":401,"status":"fail","isOperational":true}
-2025-01-17 12:52:24 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
-2025-01-17 12:52:24 [[32minfo[39m]: Token generated successfully {"email":"smahadalichowdhury@gmail.com","userId":"6772872d7465ba6f8c52c425"}
-2025-01-17 12:52:24 [[32minfo[39m]: Login successful {"userId":"6772872d7465ba6f8c52c425","email":"smahadalichowdhury@gmail.com"}

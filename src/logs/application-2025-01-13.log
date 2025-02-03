@@ -1,1 +1,0 @@
-2025-01-13 20:38:26 [[31merror[39m]: Can't find /api/dashboard/platform-performance-metrics?startDate=2000-02-22&endDate=2024-12-02 on this server {"statusCode":404,"status":"fail","isOperational":true}

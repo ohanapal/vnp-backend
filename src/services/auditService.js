@@ -6,25 +6,40 @@ const portfolioModel = require('../models/portfolioModel');
 const logger = require('../utils/logger'); // Assuming logger is set up in utils/logger.js
 const axios = require('axios'); // Ensure axios is installed and imported
 
-
 const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filters, role, connectedEntityIds }) => {
   try {
     const skip = (page - 1) * limit; // Calculate the number of documents to skip for pagination
     logger.info('Building query for fetching sheet data', { page, limit, filters, role });
-    // Build the query
-    const query = {};
-    // console.log('connectedEntityIds:', connectedEntityIds);
 
-    // Admin role can view all data without restriction
+    // Build the query object
+    const query = {};
+
+    // NEW: Apply the nextAuditId filter regardless of role.
+    if (filters?.nextAuditId) {
+      let ids = [];
+      if (Array.isArray(filters.nextAuditId)) {
+        ids = filters.nextAuditId;
+      } else {
+        // If it's a comma-separated string, split it and trim each element.
+        ids = filters.nextAuditId.split(',').map((id) => id.trim());
+      }
+      try {
+        query._id = { $in: ids.map((id) => new ObjectId(id)) };
+      } catch (error) {
+        logger.error('Error parsing nextAuditId filter', { error: error.message });
+        throw new AppError('Invalid nextAuditId filter', 400);
+      }
+    }
+
+    // ADMIN role: No restrictions, with optional search and filters.
     if (role === 'admin') {
-      // Admin can search by portfolio name
+      // Search filter: Find matching portfolios by name.
       if (search) {
         const matchingPortfolios = await portfolioModel.find({ name: { $regex: search, $options: 'i' } });
         const matchingPortfolioIds = matchingPortfolios.map((portfolio) => portfolio._id);
         query.portfolio_name = { $in: matchingPortfolioIds };
       }
-
-      // apply portfolio filter
+      // Apply portfolio filter
       if (filters?.portfolio) {
         try {
           query.portfolio_name = new ObjectId(filters?.portfolio);
@@ -33,7 +48,7 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
           throw new AppError('Invalid portfolio filter', 400);
         }
       }
-      // apply sub_portfolio filter
+      // Apply sub-portfolio filter
       if (filters?.sub_portfolio) {
         try {
           query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
@@ -42,112 +57,83 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
           throw new AppError('Invalid sub-portfolio filter', 400);
         }
       }
-
+      // Date range filter
       if (filters?.startDate && filters?.endDate) {
         query.from = {
           $gte: new Date(filters.startDate),
           $lt: new Date(filters.endDate),
         };
       }
-
-      // apply portfolio filter
+      // Property filter
       if (filters?.property) {
         try {
-          // console.log('filters.portfolio:', filters.portfolio);
           query.property_name = new ObjectId(filters?.property);
         } catch (error) {
           logger.error('Error parsing property filter', { error: error.message });
           throw new AppError('Invalid property filter', 400);
         }
       }
-
-      // Admin can apply posting_type filter
+      // Posting type filter
       if (filters?.posting_type) {
         query.posting_type = filters.posting_type;
       }
       console.log('query', query);
     } else {
-      // Non-admin roles should filter based on connectedEntityIds
-
+      // NON-ADMIN: Filter based on connectedEntityIds.
       if (role === 'portfolio') {
-        // Filter for portfolio data based on connectedEntityIds
         query.portfolio_name = { $in: connectedEntityIds };
       } else if (role === 'sub-portfolio') {
-        // Filter for sub-portfolio data based on connectedEntityIds
         query.sub_portfolio = { $in: connectedEntityIds };
       } else if (role === 'property') {
-        // Filter for property data based on connectedEntityIds
         query.property_name = { $in: connectedEntityIds };
       }
-
       // Apply search filter if provided (for non-admin roles)
       if (search) {
-        // Find matching portfolios based on the search term
         const matchingPortfolios = await portfolioModel.find({ name: { $regex: search, $options: 'i' } });
         const matchingPortfolioIds = matchingPortfolios.map((portfolio) => portfolio._id);
-
-        // Ensure search results are scoped by role and connectedEntityIds
         if (role === 'portfolio') {
-          // Only return portfolios in the search and user's connectedEntityIds
           query.portfolio_name = { $in: matchingPortfolioIds.filter((id) => connectedEntityIds.includes(id)) };
         } else if (role === 'sub-portfolio') {
-          // Only return sub-portfolios connected to the user
           query.sub_portfolio = { $in: connectedEntityIds };
-
-          // Filter sub-portfolios by portfolios from the search
           query.portfolio_name = { $in: matchingPortfolioIds };
         } else if (role === 'property') {
-          // Ensure properties belong to the user's connectedEntityIds
           query.property_name = { $in: connectedEntityIds };
-
-          // Additionally, filter by portfolios from the search
           query.portfolio_name = { $in: matchingPortfolioIds };
         }
       }
-
+      // Date range filter
       if (filters?.startDate && filters?.endDate) {
         if (role === 'portfolio') {
           query.from = {
             $gte: new Date(filters.startDate),
             $lt: new Date(filters.endDate),
-          }; // Only return portfolios in the search and user's connectedEntityIds
+          };
           query.portfolio_name = { $in: connectedEntityIds };
         } else if (role === 'sub-portfolio') {
           query.from = {
             $gte: new Date(filters.startDate),
             $lt: new Date(filters.endDate),
           };
-          // Only return sub-portfolios connected to the user
           query.sub_portfolio = { $in: connectedEntityIds };
         } else if (role === 'property') {
-          // Ensure properties belong to the user's connectedEntityIds
           query.property_name = { $in: connectedEntityIds };
-
-          // Additionally, filter by portfolios from the search
           query.from = {
             $gte: new Date(filters.startDate),
             $lt: new Date(filters.endDate),
           };
         }
       }
-
-      // Apply other filters (sub_portfolio, posting_type)
+      // Other filters: portfolio, sub_portfolio, property, posting_type
       if (filters?.portfolio) {
         try {
           if (role === 'portfolio') {
             query.portfolio_name = new ObjectId(filters?.portfolio);
-            // Only return portfolios in the search and user's connectedEntityIds
             query.portfolio_name = { $in: connectedEntityIds };
           } else if (role === 'sub-portfolio') {
             query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
-
-            // Only return sub-portfolios connected to the user
             query.portfolio_name = { $in: connectedEntityIds };
           } else if (role === 'property') {
-            // Ensure properties belong to the user's connectedEntityIds
             query.property_name = { $in: connectedEntityIds };
-
-            // Additionally, filter by portfolios from the search
             query.portfolio_name = new ObjectId(filters?.sub_portfolio);
           }
         } catch (error) {
@@ -155,57 +141,41 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
           throw new AppError(error.message);
         }
       }
-
       if (filters?.sub_portfolio) {
         try {
           if (role === 'portfolio') {
             query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
-            // Only return portfolios in the search and user's connectedEntityIds
             query.portfolio_name = { $in: connectedEntityIds };
           } else if (role === 'sub-portfolio') {
             query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
-
-            // Only return sub-portfolios connected to the user
             query.sub_portfolio = { $in: connectedEntityIds };
           } else if (role === 'property') {
-            // Ensure properties belong to the user's connectedEntityIds
             query.property_name = { $in: connectedEntityIds };
-
-            // Additionally, filter by portfolios from the search
             query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
           }
         } catch (error) {
-          console.error('Error fetching portfolio:', error);
+          console.error('Error fetching sub-portfolio:', error);
           throw new AppError(error.message);
         }
       }
-
-      // apply portfolio filter
       if (filters?.property) {
         try {
-          // console.log('filters.portfolio:', filters.portfolio);
           query.portfolio_name = new ObjectId(filters?.portfolio);
           if (role === 'portfolio') {
             query.property_name = new ObjectId(filters?.property);
-            // Only return portfolios in the search and user's connectedEntityIds
             query.portfolio_name = { $in: connectedEntityIds };
           } else if (role === 'sub-portfolio') {
             query.property_name = new ObjectId(filters?.property);
-            // Only return sub-portfolios connected to the user
             query.sub_portfolio = { $in: connectedEntityIds };
           } else if (role === 'property') {
-            // Ensure properties belong to the user's connectedEntityIds
             query.property_name = { $in: connectedEntityIds };
-
-            // Additionally, filter by portfolios from the search
             query.property_name = new ObjectId(filters?.property);
           }
         } catch (error) {
           console.error('Error fetching property:', error.message);
-          throw new AppError(error); // Ensure proper error handling
+          throw new AppError(error);
         }
       }
-
       if (filters?.posting_type) {
         query.posting_type = filters.posting_type;
       }
@@ -217,9 +187,7 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
       sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
     }
 
-    // console.log('query', query);
-
-    // Fetch data with pagination, search, filtering, and sorting
+    // Fetch data with pagination, filtering, and sorting
     const data = await sheetDataModel
       .find(query)
       .populate('portfolio_name', 'name')
@@ -237,6 +205,239 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
     throw new Error(`Error fetching data: ${error.message}`);
   }
 };
+
+
+
+// const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filters, role, connectedEntityIds }) => {
+//   try {
+//     const skip = (page - 1) * limit; // Calculate the number of documents to skip for pagination
+//     logger.info('Building query for fetching sheet data', { page, limit, filters, role });
+//     // Build the query
+//     const query = {};
+//     // console.log('connectedEntityIds:', connectedEntityIds);
+
+//     // Admin role can view all data without restriction
+//     if (role === 'admin') {
+//       // Admin can search by portfolio name
+//       if (search) {
+//         const matchingPortfolios = await portfolioModel.find({ name: { $regex: search, $options: 'i' } });
+//         const matchingPortfolioIds = matchingPortfolios.map((portfolio) => portfolio._id);
+//         query.portfolio_name = { $in: matchingPortfolioIds };
+//       }
+
+//       // apply portfolio filter
+//       if (filters?.portfolio) {
+//         try {
+//           query.portfolio_name = new ObjectId(filters?.portfolio);
+//         } catch (error) {
+//           logger.error('Error parsing portfolio filter', { error: error.message });
+//           throw new AppError('Invalid portfolio filter', 400);
+//         }
+//       }
+//       // apply sub_portfolio filter
+//       if (filters?.sub_portfolio) {
+//         try {
+//           query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
+//         } catch (error) {
+//           logger.error('Error parsing sub_portfolio filter', { error: error.message });
+//           throw new AppError('Invalid sub-portfolio filter', 400);
+//         }
+//       }
+
+//       if (filters?.startDate && filters?.endDate) {
+//         query.from = {
+//           $gte: new Date(filters.startDate),
+//           $lt: new Date(filters.endDate),
+//         };
+//       }
+
+//       // apply portfolio filter
+//       if (filters?.property) {
+//         try {
+//           // console.log('filters.portfolio:', filters.portfolio);
+//           query.property_name = new ObjectId(filters?.property);
+//         } catch (error) {
+//           logger.error('Error parsing property filter', { error: error.message });
+//           throw new AppError('Invalid property filter', 400);
+//         }
+//       }
+
+//       // Admin can apply posting_type filter
+//       if (filters?.posting_type) {
+//         query.posting_type = filters.posting_type;
+//       }
+//       console.log('query', query);
+//     } else {
+//       // Non-admin roles should filter based on connectedEntityIds
+
+//       if (role === 'portfolio') {
+//         // Filter for portfolio data based on connectedEntityIds
+//         query.portfolio_name = { $in: connectedEntityIds };
+//       } else if (role === 'sub-portfolio') {
+//         // Filter for sub-portfolio data based on connectedEntityIds
+//         query.sub_portfolio = { $in: connectedEntityIds };
+//       } else if (role === 'property') {
+//         // Filter for property data based on connectedEntityIds
+//         query.property_name = { $in: connectedEntityIds };
+//       }
+
+//       // Apply search filter if provided (for non-admin roles)
+//       if (search) {
+//         // Find matching portfolios based on the search term
+//         const matchingPortfolios = await portfolioModel.find({ name: { $regex: search, $options: 'i' } });
+//         const matchingPortfolioIds = matchingPortfolios.map((portfolio) => portfolio._id);
+
+//         // Ensure search results are scoped by role and connectedEntityIds
+//         if (role === 'portfolio') {
+//           // Only return portfolios in the search and user's connectedEntityIds
+//           query.portfolio_name = { $in: matchingPortfolioIds.filter((id) => connectedEntityIds.includes(id)) };
+//         } else if (role === 'sub-portfolio') {
+//           // Only return sub-portfolios connected to the user
+//           query.sub_portfolio = { $in: connectedEntityIds };
+
+//           // Filter sub-portfolios by portfolios from the search
+//           query.portfolio_name = { $in: matchingPortfolioIds };
+//         } else if (role === 'property') {
+//           // Ensure properties belong to the user's connectedEntityIds
+//           query.property_name = { $in: connectedEntityIds };
+
+//           // Additionally, filter by portfolios from the search
+//           query.portfolio_name = { $in: matchingPortfolioIds };
+//         }
+//       }
+
+//       if (filters?.startDate && filters?.endDate) {
+//         if (role === 'portfolio') {
+//           query.from = {
+//             $gte: new Date(filters.startDate),
+//             $lt: new Date(filters.endDate),
+//           }; // Only return portfolios in the search and user's connectedEntityIds
+//           query.portfolio_name = { $in: connectedEntityIds };
+//         } else if (role === 'sub-portfolio') {
+//           query.from = {
+//             $gte: new Date(filters.startDate),
+//             $lt: new Date(filters.endDate),
+//           };
+//           // Only return sub-portfolios connected to the user
+//           query.sub_portfolio = { $in: connectedEntityIds };
+//         } else if (role === 'property') {
+//           // Ensure properties belong to the user's connectedEntityIds
+//           query.property_name = { $in: connectedEntityIds };
+
+//           // Additionally, filter by portfolios from the search
+//           query.from = {
+//             $gte: new Date(filters.startDate),
+//             $lt: new Date(filters.endDate),
+//           };
+//         }
+//       }
+
+//       // Apply other filters (sub_portfolio, posting_type)
+//       if (filters?.portfolio) {
+//         try {
+//           if (role === 'portfolio') {
+//             query.portfolio_name = new ObjectId(filters?.portfolio);
+//             // Only return portfolios in the search and user's connectedEntityIds
+//             query.portfolio_name = { $in: connectedEntityIds };
+//           } else if (role === 'sub-portfolio') {
+//             query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
+
+//             // Only return sub-portfolios connected to the user
+//             query.portfolio_name = { $in: connectedEntityIds };
+//           } else if (role === 'property') {
+//             // Ensure properties belong to the user's connectedEntityIds
+//             query.property_name = { $in: connectedEntityIds };
+
+//             // Additionally, filter by portfolios from the search
+//             query.portfolio_name = new ObjectId(filters?.sub_portfolio);
+//           }
+//         } catch (error) {
+//           console.error('Error fetching portfolio:', error);
+//           throw new AppError(error.message);
+//         }
+//       }
+
+//       if (filters?.sub_portfolio) {
+//         try {
+//           if (role === 'portfolio') {
+//             query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
+//             // Only return portfolios in the search and user's connectedEntityIds
+//             query.portfolio_name = { $in: connectedEntityIds };
+//           } else if (role === 'sub-portfolio') {
+//             query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
+
+//             // Only return sub-portfolios connected to the user
+//             query.sub_portfolio = { $in: connectedEntityIds };
+//           } else if (role === 'property') {
+//             // Ensure properties belong to the user's connectedEntityIds
+//             query.property_name = { $in: connectedEntityIds };
+
+//             // Additionally, filter by portfolios from the search
+//             query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
+//           }
+//         } catch (error) {
+//           console.error('Error fetching portfolio:', error);
+//           throw new AppError(error.message);
+//         }
+//       }
+
+//       // apply portfolio filter
+//       if (filters?.property) {
+//         try {
+//           // console.log('filters.portfolio:', filters.portfolio);
+//           query.portfolio_name = new ObjectId(filters?.portfolio);
+//           if (role === 'portfolio') {
+//             query.property_name = new ObjectId(filters?.property);
+//             // Only return portfolios in the search and user's connectedEntityIds
+//             query.portfolio_name = { $in: connectedEntityIds };
+//           } else if (role === 'sub-portfolio') {
+//             query.property_name = new ObjectId(filters?.property);
+//             // Only return sub-portfolios connected to the user
+//             query.sub_portfolio = { $in: connectedEntityIds };
+//           } else if (role === 'property') {
+//             // Ensure properties belong to the user's connectedEntityIds
+//             query.property_name = { $in: connectedEntityIds };
+
+//             // Additionally, filter by portfolios from the search
+//             query.property_name = new ObjectId(filters?.property);
+//           }
+//         } catch (error) {
+//           console.error('Error fetching property:', error.message);
+//           throw new AppError(error); // Ensure proper error handling
+//         }
+//       }
+
+//       if (filters?.posting_type) {
+//         query.posting_type = filters.posting_type;
+//       }
+//     }
+
+//     // Sorting
+//     const sortOptions = {};
+//     if (sortBy && sortOrder) {
+//       sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+//     }
+
+//     // console.log('query', query);
+
+//     // Fetch data with pagination, search, filtering, and sorting
+//     const data = await sheetDataModel
+//       .find(query)
+//       .populate('portfolio_name', 'name')
+//       .populate('sub_portfolio', 'name')
+//       .populate('property_name', 'name')
+//       .sort(sortOptions)
+//       .skip(skip)
+//       .limit(limit);
+
+//     // Count total documents for the query
+//     const total = await sheetDataModel.countDocuments(query);
+//     logger.info('Query executed successfully', { total });
+//     return { data, total };
+//   } catch (error) {
+//     throw new Error(`Error fetching data: ${error.message}`);
+//   }
+// };
 
 //with download option
 // const getAuditSheetData = async ({

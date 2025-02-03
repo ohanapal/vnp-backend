@@ -11,6 +11,7 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
     const skip = (page - 1) * limit; // Calculate the number of documents to skip for pagination
     const query = {}; // Build the query for filtering data
 
+    // console.log("filters: " + filters.posting_type);
     if (role === 'admin') {
       // Admin can search by property name
       if (search) {
@@ -123,6 +124,7 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
 
     // Count total documents for the query
     const total = await sheetDataModel.countDocuments(query);
+    console.log("total", total)
 
     return { data: enrichedSheetData, total };
   } catch (error) {

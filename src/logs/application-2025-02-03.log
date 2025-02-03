@@ -1,0 +1,23 @@
+2025-02-03 11:52:32 [[31merror[39m]: Unauthorized {"statusCode":401,"status":"fail","isOperational":true}
+2025-02-03 11:53:17 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
+2025-02-03 11:53:17 [[33mwarn[39m]: Invalid password {"email":"smahadalichowdhury@gmail.com"}
+2025-02-03 11:53:17 [[31merror[39m]: Login failed {"email":"smahadalichowdhury@gmail.com","error":"Invalid password"}
+2025-02-03 11:53:17 [[31merror[39m]: Invalid password {"statusCode":401,"status":"fail","isOperational":true}
+2025-02-03 11:54:22 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
+2025-02-03 11:54:22 [[33mwarn[39m]: Invalid password {"email":"smahadalichowdhury@gmail.com"}
+2025-02-03 11:54:22 [[31merror[39m]: Login failed {"email":"smahadalichowdhury@gmail.com","error":"Invalid password"}
+2025-02-03 11:54:22 [[31merror[39m]: Invalid password {"statusCode":401,"status":"fail","isOperational":true}
+2025-02-03 11:54:30 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
+2025-02-03 11:54:30 [[32minfo[39m]: Token generated successfully {"email":"smahadalichowdhury@gmail.com","userId":"6790d033c31c6351ce39d82d"}
+2025-02-03 11:54:30 [[32minfo[39m]: Login successful {"userId":"6790d033c31c6351ce39d82d","email":"smahadalichowdhury@gmail.com"}
+2025-02-03 12:03:42 [[32minfo[39m]: Login request received {"email":"cse_2012020156@lus.ac.bd"}
+2025-02-03 12:03:42 [[32minfo[39m]: Token generated successfully {"email":"cse_2012020156@lus.ac.bd","userId":"67933685f20dc85c69050bd5"}
+2025-02-03 12:03:42 [[32minfo[39m]: Login successful {"userId":"67933685f20dc85c69050bd5","email":"cse_2012020156@lus.ac.bd"}
+2025-02-03 12:04:03 [[31merror[39m]: Unauthorized {"statusCode":401,"status":"fail","isOperational":true}
+2025-02-03 13:20:18 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
+2025-02-03 13:20:18 [[32minfo[39m]: Token generated successfully {"email":"smahadalichowdhury@gmail.com","userId":"6790d033c31c6351ce39d82d"}
+2025-02-03 13:20:18 [[32minfo[39m]: Login successful {"userId":"6790d033c31c6351ce39d82d","email":"smahadalichowdhury@gmail.com"}
+2025-02-03 14:12:17 [[32minfo[39m]: Received request to fetch sheet data {"user":{"_id":"67933685f20dc85c69050bd5","name":"ahad rainmaker","email":"cse_2012020156@lus.ac.bd","password":"$2b$10$V1.HbByGreWEv5OaiOZxeOcJbLi9dd9uHHR2rCfNjoIoAylOFw5ke","role":"portfolio","connected_entity_id":["677f93c6c6618c7d08091c43"],"invited_user":"677271b67b9759f7412b112c","is_verified":true,"download_report":true,"createdAt":"2025-01-24T06:43:17.474Z","updatedAt":"2025-01-24T06:44:23.262Z","__v":0},"query":{"page":"1","limit":"3","nextAuditId":"677f99f7c6618c7d08094c7f,677f99f7c6618c7d08094c80"}}
+2025-02-03 14:12:17 [[32minfo[39m]: Building query for fetching sheet data {"page":1,"limit":3,"filters":{"nextAuditId":"677f99f7c6618c7d08094c7f,677f99f7c6618c7d08094c80"},"role":"portfolio"}
+2025-02-03 14:12:17 [[32minfo[39m]: Query executed successfully {"total":2}
+2025-02-03 14:12:17 [[32minfo[39m]: Sheet data fetched successfully {"totalItems":2}

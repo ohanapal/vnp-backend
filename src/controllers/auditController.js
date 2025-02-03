@@ -2,6 +2,60 @@ const { getAuditSheetData, updateAuditFiles,deleteSheetDataService, updateSheetD
 const logger = require('../utils/logger'); // Assuming logger is set up in utils/logger.js
 const AppError = require('../utils/appError');
 
+// const sheetDataController = async (req, res) => {
+//   const { role, connected_entity_id: connectedEntityIds } = req.user;
+//   try {
+//     const {
+//       page = 1,
+//       limit = 10,
+//       search = '',
+//       sortBy = 'createdAt',
+//       sortOrder = 'desc',
+//       property,
+//       portfolio,
+//       sub_portfolio,
+//       posting_type,
+//       startDate,
+//       endDate,
+//     } = req.query;
+//     // console.log('query', req.query);
+//     logger.info('Received request to fetch sheet data', { user: req.user, query: req.query });
+//     // Build the filters object
+//     const filters = {};
+//     if (portfolio) filters.portfolio = portfolio;
+//     if (sub_portfolio) filters.sub_portfolio = sub_portfolio;
+//     if (posting_type) filters.posting_type = posting_type;
+//     if (property) filters.property = property;
+//     if (startDate) filters.startDate = startDate;
+//     if (endDate) filters.endDate = endDate;
+
+//     const result = await getAuditSheetData({
+//       page: parseInt(page, 10),
+//       limit: parseInt(limit, 10),
+//       search,
+//       sortBy,
+//       sortOrder,
+//       filters,
+//       role,
+//       connectedEntityIds,
+//     });
+//     logger.info('Sheet data fetched successfully', { totalItems: result.length });
+//     res.status(200).json({
+//       success: true,
+//       message: 'Data fetched successfully',
+//       data: result.data,
+//       pagination: {
+//         currentPage: page,
+//         totalPages: Math.ceil(result.total / limit),
+//         totalItems: result.total,
+//       },
+//     });
+//   } catch (error) {
+//     logger.error('Error fetching sheet data', { error: error.message });
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
 const sheetDataController = async (req, res) => {
   const { role, connected_entity_id: connectedEntityIds } = req.user;
   try {
@@ -17,9 +71,11 @@ const sheetDataController = async (req, res) => {
       posting_type,
       startDate,
       endDate,
+      nextAuditId, // New filter parameter from the frontend
     } = req.query;
-    // console.log('query', req.query);
+
     logger.info('Received request to fetch sheet data', { user: req.user, query: req.query });
+
     // Build the filters object
     const filters = {};
     if (portfolio) filters.portfolio = portfolio;
@@ -28,6 +84,7 @@ const sheetDataController = async (req, res) => {
     if (property) filters.property = property;
     if (startDate) filters.startDate = startDate;
     if (endDate) filters.endDate = endDate;
+    if (nextAuditId) filters.nextAuditId = nextAuditId; // Add new filter
 
     const result = await getAuditSheetData({
       page: parseInt(page, 10),
@@ -39,7 +96,8 @@ const sheetDataController = async (req, res) => {
       role,
       connectedEntityIds,
     });
-    logger.info('Sheet data fetched successfully', { totalItems: result.length });
+
+    logger.info('Sheet data fetched successfully', { totalItems: result.total });
     res.status(200).json({
       success: true,
       message: 'Data fetched successfully',
@@ -55,6 +113,7 @@ const sheetDataController = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 const updateAuditDataController = async (req, res) => {
   try {

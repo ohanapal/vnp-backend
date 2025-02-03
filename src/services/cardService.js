@@ -2,6 +2,7 @@ const sheetDataModel = require('../models/sheetDataModel'); // Replace with the 
 const portfolioModel = require('../models/portfolioModel'); // Replace with the correct path to your model
 const AppError = require('../utils/appError');
 const moment = require('moment');
+const PropertyModel = require('../models/propertyModel');
 
 // const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, startDate, endDate) => {
 //   try {
@@ -127,7 +128,6 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       const end = new Date(endDate);
       console.log('Adding date range', start, end);
 
-      // query.$and = [{ from: { $gte: start } }, { to: { $lte: end } }];
       query = {
         $and: [
           { from: { $lte: end } }, // Database range starts before the query range ends
@@ -137,12 +137,10 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
     }
 
     if (role !== 'admin') {
-      // Ensure connectedEntityIds is provided for non-admin roles
       if (!connectedEntityIds || connectedEntityIds.length === 0) {
         throw new AppError('No connected entity IDs provided for this role.', 403);
       }
 
-      // Match connectedEntityIds with the appropriate field based on the role
       const entityQuery = [];
       if (role === 'portfolio') {
         entityQuery.push({ portfolio_name: { $in: connectedEntityIds } });
@@ -155,10 +153,9 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       }
 
       if (entityQuery.length > 0) {
-        query.$or = entityQuery; // Match any of the entity criteria
+        query.$or = entityQuery;
       }
     } else {
-      // For admin, include selectedPortfolio filtering
       if (selectedPortfolio && selectedPortfolio !== 'all') {
         const portfolio = await portfolioModel.findOne({ name: selectedPortfolio });
         if (!portfolio) {
@@ -168,7 +165,7 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       }
     }
 
-    // Fetch matching documents from sheetDataModel based on the query
+    // Fetch matching documents from sheetDataModel
     const documents = await sheetDataModel.find(query, {
       'expedia.amount_collectable': 1,
       'booking.amount_collectable': 1,
@@ -178,6 +175,8 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       'agoda.amount_confirmed': 1,
       from: 1,
       to: 1,
+      next_audit_date: 1, // Include next_audit_date in results
+      _id: 1, // Include _id in results
     });
 
     const totals = {
@@ -188,6 +187,8 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       BookingConfirmedValue: 0,
       AgodaConfirmedValue: 0,
       PortfolioCount: documents.length,
+      NextAuditDateCount: 0, // To store count of documents with future next_audit_date
+      NextAuditDateIds: [], // To store ids of documents with future next_audit_date
     };
 
     const parseCurrency = (value) => {
@@ -196,6 +197,9 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       const parsedValue = parseFloat(cleanedValue);
       return isNaN(parsedValue) ? 0 : parsedValue;
     };
+
+    // Get today's date for comparison
+    const today = new Date();
 
     documents.forEach((doc) => {
       const expediaValue = parseCurrency(doc?.expedia?.amount_collectable);
@@ -211,6 +215,12 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       totals.ExpediaConfirmedValue += expediaConfirmed;
       totals.BookingConfirmedValue += bookingConfirmed;
       totals.AgodaConfirmedValue += agodaConfirmed;
+
+      // Check if the next_audit_date is greater than today
+      if (doc.next_audit_date && new Date(doc.next_audit_date) > today) {
+        totals.NextAuditDateCount += 1; // Increment if next_audit_date is in the future
+        totals.NextAuditDateIds.push(doc._id); // Add document _id to the list
+      }
     });
 
     const totalReported = totals.ExpediaValue + totals.BookingValue + totals.AgodaValue;
@@ -218,7 +228,7 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
 
     const formatToTwoDecimals = (value) => parseFloat(value.toFixed(2));
 
-    return {
+    const result = {
       collectableAmounts: {
         expedia: formatToTwoDecimals(totals.ExpediaValue),
         booking: formatToTwoDecimals(totals.BookingValue),
@@ -233,6 +243,23 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       },
       totalAudits: totals.PortfolioCount,
     };
+
+    // Add logic for next_audit_date based on role
+    if (role === 'property') {
+      // For property, show next_audit_date if it's greater than today
+      const futureAudit = documents.find((doc) => new Date(doc.next_audit_date) > today);
+      if (futureAudit) {
+        result.nextAuditDate = futureAudit.next_audit_date;
+      } else {
+        result.nextAuditDate = null; // No future audit date
+      }
+    } else if (role === 'portfolio' || role === 'sub-portfolio') {
+      // For portfolio and sub-portfolio, show how many have a next_audit_date greater than today
+      result.nextAuditDateCount = totals.NextAuditDateCount;
+      result.nextAuditDateIds = totals.NextAuditDateIds; // Return the ids of documents with future next_audit_date
+    }
+
+    return result;
   } catch (error) {
     console.error('Error in calculateMetrics:', error);
     throw new AppError('Failed to calculate metrics.', 500);

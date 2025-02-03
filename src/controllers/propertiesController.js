@@ -23,6 +23,8 @@ const sheetDataController = async (req, res) => {
       posting_type,
     } = req.query;
     // console.log('query', req.query);
+    // console.log('req, query', req.query);
+   // const decodedPostingType = posting_type ? decodeURIComponent(posting_type.trim()) : undefined;
 
     // Build the filters object
     const filters = {};
@@ -192,7 +194,6 @@ const deletePropertyController = async (req, res) => {
     return res.status(statusCode).json({ success: false, message: error.message });
   }
 };
-
 
 module.exports = {
   sheetDataController,

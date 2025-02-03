@@ -203,25 +203,18 @@ exports.notifyChange = async (req, res) => {
 
     // console.log('Mapped row object:', rowObject);
     const parseDate = (dateString) => {
-      // If the dateString is empty or invalid, return undefined
-      if (!dateString || dateString === 'To' || !/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+      if (!dateString || dateString === 'To' || !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateString)) {
         return undefined; // Return undefined for invalid date
       }
 
       const [month, day, year] = dateString.split('/');
+      const date = new Date(`${year}-${month}-${day}`); // Use YYYY-MM-DD format for better parsing
 
-      // Try creating a valid Date object from the parts
-      const date = new Date(`${year}-${month}-${day}`);
-
-      // If the date is invalid, return undefined
-      if (isNaN(date)) {
-        return undefined;
-      }
-
-      return date; // Return valid Date object
+      return isNaN(date) ? undefined : date;
     };
 
-    // console.log('Row data:', rowObject);
+
+    console.log('Row data:', rowObject);
 
     // Build the mapped data object using header keys
     const mappedData = {
@@ -234,6 +227,7 @@ exports.notifyChange = async (req, res) => {
       // to: rowObject['To'] ? new Date(rowObject['To']) : undefined,
       from: parseDate(rowObject['From']),
       to: parseDate(rowObject['To']),
+      next_audit_date: parseDate(rowObject['Next Audit Date']),
       expedia: {
         expedia_id: rowObject['Expedia ID'],
         review_status: rowObject['Expedia Review Status'],
@@ -476,6 +470,8 @@ exports.bulkUpload = async (req, res) => {
                 property_name: propertyId,
                 from: getCellValue(row, 'From'),
                 to: getCellValue(row, 'To'),
+                next_audit_date: getCellValue(row, 'Next Audit Date'),
+
                 expedia: {
                   expedia_id: getCellValue(row, 'Expedia ID'),
                   review_status: getCellValue(row, 'Expedia Review Status'),
