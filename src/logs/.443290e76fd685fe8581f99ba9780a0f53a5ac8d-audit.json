@@ -6,11 +6,6 @@
     "auditLog": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/.443290e76fd685fe8581f99ba9780a0f53a5ac8d-audit.json",
     "files": [
         {
-            "date": 1737396033829,
-            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-01-21.log",
-            "hash": "4e2ea005d790b8a8deaa6ddaa643e94d74ef9476e77e00934c10d84488e43948"
-        },
-        {
             "date": 1737530760693,
             "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-01-22.log",
             "hash": "cb9a58621f7a73d58810211630ec098bd061c43e5ff418a2366d01ba29141347"
@@ -34,6 +29,11 @@
             "date": 1738558965730,
             "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-02-03.log",
             "hash": "eb558911e59b90b0d213bb125155f07ca2b30692c31333f8fa0790b2145daef0"
+        },
+        {
+            "date": 1738667798641,
+            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-02-04.log",
+            "hash": "0e6ef36bfc1e0194622d363836feae9c84fa5fbbd95b654be55e8d953c75ef5e"
         }
     ],
     "hashType": "sha256"

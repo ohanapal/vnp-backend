@@ -206,8 +206,6 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
   }
 };
 
-
-
 // const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filters, role, connectedEntityIds }) => {
 //   try {
 //     const skip = (page - 1) * limit; // Calculate the number of documents to skip for pagination
@@ -649,7 +647,6 @@ const updateAuditDataService = async (id, data, role, connectedEntityIds) => {
   }
 };
 
-
 const deleteSheetDataService = async (id, role, connectedEntityIds) => {
   // Find the sheet data by ID
   const sheetData = await sheetDataModel.findById(id);
@@ -686,7 +683,6 @@ async function deleteRow(uniqueId) {
     throw error; // Re-throwing error so the calling function can handle it
   }
 }
-
 
 const getSingleAuditDataService = async (id, role, connectedEntityIds) => {
   const sheetData = await sheetDataModel.findById(id).populate('portfolio_name sub_portfolio property_name');
@@ -751,10 +747,46 @@ const updateAuditFiles = async (data) => {
   return { successfulUpdates, failedUpdates };
 };
 
+const uploadContactService = async (data) => {
+  const updatePromises = data.map(async ({ id, uploadedUrl }) => {
+    try {
+      const updatedSheet = await sheetDataModel.findByIdAndUpdate(
+        id,
+        { contracts: uploadedUrl },
+        { new: true, runValidators: true },
+      );
+
+      if (!updatedSheet) {
+        throw new Error(`Sheet with ID ${id} not found.`);
+      }
+
+      return { status: 'fulfilled', id, updatedSheet };
+    } catch (error) {
+      return { status: 'rejected', id, error: error.message };
+    }
+  });
+
+  // Use Promise.allSettled to ensure we capture all outcomes
+  const results = await Promise.allSettled(updatePromises);
+
+  // Parse results to separate successes and failures
+  const successfulUpdates = results.filter((result) => result.status === 'fulfilled').map((result) => result.value);
+
+  const failedUpdates = results
+    .filter((result) => result.status === 'rejected')
+    .map((result) => ({
+      id: result.reason?.id || 'Unknown',
+      error: result.reason?.error || 'Unknown error',
+    }));
+
+  return { successfulUpdates, failedUpdates };
+};
+
 module.exports = {
   getAuditSheetData,
   getSingleAuditDataService,
   deleteSheetDataService,
   updateAuditDataService,
   updateAuditFiles,
+  uploadContactService,
 };

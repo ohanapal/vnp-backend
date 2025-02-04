@@ -14,7 +14,11 @@ const sheetDataSchema = new mongoose.Schema(
       type: Date,
     }, // From Date
     to: { type: Date }, // To Date
-    next_audit_date: { type: Date},
+    next_audit_date: { type: Date },
+    contracts: {
+      type: String,
+    },
+
     expedia: {
       expedia_id: { type: String, required: true }, // Expedia ID
       review_status: { type: String }, // Expedia Review Status

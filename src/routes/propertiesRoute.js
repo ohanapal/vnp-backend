@@ -21,6 +21,5 @@ router.get('/single-data/:id', authMiddleware('admin', 'sub-portfolio', 'portfol
 router.get('/get-properties', authMiddleware('admin', 'sub-portfolio', 'portfolio', 'property'), getAllProperties);
 router.post('/create', authMiddleware('admin'), createPropertyController);
 router.put('/update/:id', authMiddleware('admin'), updatePropertyController);
-router.delete('/delete/:id', authMiddleware('admin'), deletePropertyController);;
-
+router.delete('/delete/:id', authMiddleware('admin'), deletePropertyController);
 module.exports = router;

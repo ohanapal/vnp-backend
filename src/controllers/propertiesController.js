@@ -7,6 +7,7 @@ const {
   createProperty,
   updateProperty,
   deleteProperty,
+  uploadContactService,
 } = require('../services/propertiesService');
 
 const sheetDataController = async (req, res) => {
@@ -194,6 +195,8 @@ const deletePropertyController = async (req, res) => {
     return res.status(statusCode).json({ success: false, message: error.message });
   }
 };
+
+
 
 module.exports = {
   sheetDataController,

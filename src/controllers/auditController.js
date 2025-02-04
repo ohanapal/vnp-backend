@@ -1,4 +1,10 @@
-const { getAuditSheetData, updateAuditFiles,deleteSheetDataService, updateSheetDataService } = require('../services/auditService');
+const {
+  getAuditSheetData,
+  updateAuditFiles,
+  deleteSheetDataService,
+  updateSheetDataService,
+  uploadContactService,
+} = require('../services/auditService');
 const logger = require('../utils/logger'); // Assuming logger is set up in utils/logger.js
 const AppError = require('../utils/appError');
 
@@ -114,7 +120,6 @@ const sheetDataController = async (req, res) => {
   }
 };
 
-
 const updateAuditDataController = async (req, res) => {
   try {
     const { id } = req.params;
@@ -206,10 +211,32 @@ const updateAuditFilesController = async (req, res) => {
   }
 };
 
+const uploadContactController = async (req, res) => {
+  try {
+    const data = req.body; // Expecting an array of objects [{ id, uploadedUrl }]
+
+    if (!Array.isArray(data) || data.length === 0) {
+      return res.status(400).json({
+        error: 'Invalid input: Request body should be a non-empty array.',
+      });
+    }
+
+    const { successfulUpdates, failedUpdates } = await uploadContactService(data);
+
+    res.status(200).json({ data: successfulUpdates });
+  } catch (error) {
+    console.error('Error processing audit file updates:', error);
+    res.status(500).json({
+      error: 'Internal server error. Please try again later.',
+    });
+  }
+};
+
 module.exports = {
   sheetDataController,
   getSingleAuditData,
   deleteAuditDataController,
   updateAuditDataController,
   updateAuditFilesController,
+  uploadContactController,
 };

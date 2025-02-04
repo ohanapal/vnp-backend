@@ -132,6 +132,7 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
   }
 };
 
+
 const updateSheetDataService = async (id, data, role, connectedEntityIds) => {
   // Find the sheet data by ID
   const sheetData = await sheetDataModel.findById(id);
@@ -379,6 +380,10 @@ const deleteProperty = async (id) => {
 
   return deletedProperty;
 };
+
+
+
+
 
 module.exports = {
   getPropertySheetData,
