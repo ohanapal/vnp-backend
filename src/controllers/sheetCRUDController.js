@@ -213,7 +213,6 @@ exports.notifyChange = async (req, res) => {
       return isNaN(date) ? undefined : date;
     };
 
-
     console.log('Row data:', rowObject);
 
     // Build the mapped data object using header keys
@@ -227,7 +226,7 @@ exports.notifyChange = async (req, res) => {
       // to: rowObject['To'] ? new Date(rowObject['To']) : undefined,
       from: parseDate(rowObject['From']),
       to: parseDate(rowObject['To']),
-      next_audit_date: parseDate(rowObject['Next Audit Date']),
+      next_audit_date: parseDate(rowObject['Next Due Date']),
       expedia: {
         expedia_id: rowObject['Expedia ID'],
         review_status: rowObject['Expedia Review Status'],
@@ -470,7 +469,7 @@ exports.bulkUpload = async (req, res) => {
                 property_name: propertyId,
                 from: getCellValue(row, 'From'),
                 to: getCellValue(row, 'To'),
-                next_audit_date: getCellValue(row, 'Next Audit Date'),
+                next_audit_date: getCellValue(row, 'Next Due Date'),
 
                 expedia: {
                   expedia_id: getCellValue(row, 'Expedia ID'),
