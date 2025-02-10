@@ -265,164 +265,21 @@ const PropertyModel = require('../models/propertyModel');
 //     throw new AppError('Failed to calculate metrics.', 500);
 //   }
 // };
-// const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, startDate, endDate) => {
-//   try {
-//     let query = {};
-
-//     // Add date range filtering if provided
-//     if (startDate && endDate) {
-//       const start = new Date(startDate);
-//       const end = new Date(endDate);
-//       console.log('Adding date range', start, end);
-
-//       query = {
-//         $and: [
-//           { from: { $lte: end } }, // Database range starts before the query range ends
-//           { to: { $gte: start } }, // Database range ends after the query range starts
-//         ],
-//       };
-//     }
-
-//     if (role !== 'admin') {
-//       if (!connectedEntityIds || connectedEntityIds.length === 0) {
-//         throw new AppError('No connected entity IDs provided for this role.', 403);
-//       }
-
-//       const entityQuery = [];
-//       if (role === 'portfolio') {
-//         entityQuery.push({ portfolio_name: { $in: connectedEntityIds } });
-//       }
-//       if (role === 'sub-portfolio') {
-//         entityQuery.push({ sub_portfolio: { $in: connectedEntityIds } });
-//       }
-//       if (role === 'property') {
-//         entityQuery.push({ property_name: { $in: connectedEntityIds } });
-//       }
-
-//       if (entityQuery.length > 0) {
-//         query.$or = entityQuery;
-//       }
-//     } else {
-//       // For admin, if a selectedPortfolio is provided (and not "all"), filter by that portfolio.
-//       if (selectedPortfolio && selectedPortfolio !== 'all') {
-//         const portfolio = await portfolioModel.findOne({ name: selectedPortfolio });
-//         if (!portfolio) {
-//           throw new AppError(`Portfolio with name "${selectedPortfolio}" not found.`, 404);
-//         }
-//         query.portfolio_name = portfolio._id;
-//       }
-//       // Otherwise, admin sees all data (no further filtering by connectedEntityIds)
-//     }
-
-//     // Fetch matching documents from sheetDataModel
-//     const documents = await sheetDataModel.find(query, {
-//       'expedia.amount_collectable': 1,
-//       'booking.amount_collectable': 1,
-//       'agoda.amount_collectable': 1,
-//       'expedia.amount_confirmed': 1,
-//       'booking.amount_confirmed': 1,
-//       'agoda.amount_confirmed': 1,
-//       from: 1,
-//       to: 1,
-//       next_audit_date: 1, // Include next_audit_date in results
-//       _id: 1, // Include _id in results
-//     });
-
-//     // Initialize totals and next audit info tracking
-//     const totals = {
-//       ExpediaValue: 0,
-//       BookingValue: 0,
-//       AgodaValue: 0,
-//       ExpediaConfirmedValue: 0,
-//       BookingConfirmedValue: 0,
-//       AgodaConfirmedValue: 0,
-//       PortfolioCount: documents.length,
-//       NextAuditDateCount: 0, // Count of documents with future next_audit_date
-//       NextAuditDateIds: [], // List of _id's for documents with future next_audit_date
-//     };
-
-//     const parseCurrency = (value) => {
-//       if (!value) return 0;
-//       const cleanedValue = value.trim().replace(/[^0-9.-]+/g, '');
-//       const parsedValue = parseFloat(cleanedValue);
-//       return isNaN(parsedValue) ? 0 : parsedValue;
-//     };
-
-//     // Get today's date for comparison
-//     const today = new Date();
-
-//     // Process each document
-//     documents.forEach((doc) => {
-//       const expediaValue = parseCurrency(doc?.expedia?.amount_collectable);
-//       const bookingValue = parseCurrency(doc?.booking?.amount_collectable);
-//       const agodaValue = parseCurrency(doc?.agoda?.amount_collectable);
-//       const expediaConfirmed = parseCurrency(doc?.expedia?.amount_confirmed);
-//       const bookingConfirmed = parseCurrency(doc?.booking?.amount_confirmed);
-//       const agodaConfirmed = parseCurrency(doc?.agoda?.amount_confirmed);
-
-//       totals.ExpediaValue += expediaValue;
-//       totals.BookingValue += bookingValue;
-//       totals.AgodaValue += agodaValue;
-//       totals.ExpediaConfirmedValue += expediaConfirmed;
-//       totals.BookingConfirmedValue += bookingConfirmed;
-//       totals.AgodaConfirmedValue += agodaConfirmed;
-
-//       // If next_audit_date is in the future, update count and list of IDs
-//       if (doc.next_audit_date && new Date(doc.next_audit_date) > today) {
-//         totals.NextAuditDateCount += 1;
-//         totals.NextAuditDateIds.push(doc._id);
-//       }
-//     });
-
-//     const totalReported = totals.ExpediaValue + totals.BookingValue + totals.AgodaValue;
-//     const totalConfirmed = totals.ExpediaConfirmedValue + totals.BookingConfirmedValue + totals.AgodaConfirmedValue;
-//     const formatToTwoDecimals = (value) => parseFloat(value.toFixed(2));
-
-//     const result = {
-//       collectableAmounts: {
-//         expedia: formatToTwoDecimals(totals.ExpediaValue),
-//         booking: formatToTwoDecimals(totals.BookingValue),
-//         agoda: formatToTwoDecimals(totals.AgodaValue),
-//         total: formatToTwoDecimals(totalReported),
-//       },
-//       confirmedAmounts: {
-//         expedia: formatToTwoDecimals(totals.ExpediaConfirmedValue),
-//         booking: formatToTwoDecimals(totals.BookingConfirmedValue),
-//         agoda: formatToTwoDecimals(totals.AgodaConfirmedValue),
-//         total: formatToTwoDecimals(totalConfirmed),
-//       },
-//       totalAudits: totals.PortfolioCount,
-//     };
-
-//     // Add logic for next_audit_date based on role:
-//     // For property, return the first future next_audit_date.
-//     // For portfolio, sub-portfolio, and admin, return count and IDs.
-//     if (role === 'property') {
-//       const futureAudit = documents.find((doc) => new Date(doc.next_audit_date) > today);
-//       result.nextAuditDate = futureAudit ? futureAudit.next_audit_date : null;
-//     } else if (role === 'portfolio' || role === 'sub-portfolio' || role === 'admin') {
-//       result.nextAuditDateCount = totals.NextAuditDateCount;
-//       result.nextAuditDateIds = totals.NextAuditDateIds;
-//     }
-
-//     return result;
-//   } catch (error) {
-//     console.error('Error in calculateMetrics:', error);
-//     throw new AppError('Failed to calculate metrics.', 500);
-//   }
-// };
-
 const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, startDate, endDate) => {
   try {
     let query = {};
 
+    // Add date range filtering if provided
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
       console.log('Adding date range', start, end);
 
       query = {
-        $and: [{ from: { $lte: end } }, { to: { $gte: start } }],
+        $and: [
+          { from: { $lte: end } }, // Database range starts before the query range ends
+          { to: { $gte: start } }, // Database range ends after the query range starts
+        ],
       };
     }
 
@@ -432,14 +289,21 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       }
 
       const entityQuery = [];
-      if (role === 'portfolio') entityQuery.push({ portfolio_name: { $in: connectedEntityIds } });
-      if (role === 'sub-portfolio') entityQuery.push({ sub_portfolio: { $in: connectedEntityIds } });
-      if (role === 'property') entityQuery.push({ property_name: { $in: connectedEntityIds } });
+      if (role === 'portfolio') {
+        entityQuery.push({ portfolio_name: { $in: connectedEntityIds } });
+      }
+      if (role === 'sub-portfolio') {
+        entityQuery.push({ sub_portfolio: { $in: connectedEntityIds } });
+      }
+      if (role === 'property') {
+        entityQuery.push({ property_name: { $in: connectedEntityIds } });
+      }
 
       if (entityQuery.length > 0) {
         query.$or = entityQuery;
       }
     } else {
+      // For admin, if a selectedPortfolio is provided (and not "all"), filter by that portfolio.
       if (selectedPortfolio && selectedPortfolio !== 'all') {
         const portfolio = await portfolioModel.findOne({ name: selectedPortfolio });
         if (!portfolio) {
@@ -447,8 +311,10 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
         }
         query.portfolio_name = portfolio._id;
       }
+      // Otherwise, admin sees all data (no further filtering by connectedEntityIds)
     }
 
+    // Fetch matching documents from sheetDataModel
     const documents = await sheetDataModel.find(query, {
       'expedia.amount_collectable': 1,
       'booking.amount_collectable': 1,
@@ -458,10 +324,11 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       'agoda.amount_confirmed': 1,
       from: 1,
       to: 1,
-      next_audit_date: 1,
-      _id: 1,
+      next_audit_date: 1, // Include next_audit_date in results
+      _id: 1, // Include _id in results
     });
 
+    // Initialize totals and next audit info tracking
     const totals = {
       ExpediaValue: 0,
       BookingValue: 0,
@@ -470,10 +337,8 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       BookingConfirmedValue: 0,
       AgodaConfirmedValue: 0,
       PortfolioCount: documents.length,
-      NextAuditDateCount: 0,
-      NextAuditDateIds: [],
-      PassedAuditDateCount: 0, // Count of past audit dates
-      PassedAuditDateIds: [], // List of _id's for past audit dates
+      NextAuditDateCount: 0, // Count of documents with future next_audit_date
+      NextAuditDateIds: [], // List of _id's for documents with future next_audit_date
     };
 
     const parseCurrency = (value) => {
@@ -483,8 +348,10 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       return isNaN(parsedValue) ? 0 : parsedValue;
     };
 
+    // Get today's date for comparison
     const today = new Date();
 
+    // Process each document
     documents.forEach((doc) => {
       const expediaValue = parseCurrency(doc?.expedia?.amount_collectable);
       const bookingValue = parseCurrency(doc?.booking?.amount_collectable);
@@ -500,15 +367,10 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       totals.BookingConfirmedValue += bookingConfirmed;
       totals.AgodaConfirmedValue += agodaConfirmed;
 
-      if (doc.next_audit_date) {
-        const auditDate = new Date(doc.next_audit_date);
-        if (auditDate > today) {
-          totals.NextAuditDateCount += 1;
-          totals.NextAuditDateIds.push(doc._id);
-        } else {
-          totals.PassedAuditDateCount += 1;
-          totals.PassedAuditDateIds.push(doc._id);
-        }
+      // If next_audit_date is in the future, update count and list of IDs
+      if (doc.next_audit_date && new Date(doc.next_audit_date) > today) {
+        totals.NextAuditDateCount += 1;
+        totals.NextAuditDateIds.push(doc._id);
       }
     });
 
@@ -530,15 +392,17 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
         total: formatToTwoDecimals(totalConfirmed),
       },
       totalAudits: totals.PortfolioCount,
-      nextAuditDateCount: totals.NextAuditDateCount,
-      nextAuditDateIds: totals.NextAuditDateIds,
-      passedAuditDateCount: totals.PassedAuditDateCount,
-      passedAuditDateIds: totals.PassedAuditDateIds,
     };
 
+    // Add logic for next_audit_date based on role:
+    // For property, return the first future next_audit_date.
+    // For portfolio, sub-portfolio, and admin, return count and IDs.
     if (role === 'property') {
       const futureAudit = documents.find((doc) => new Date(doc.next_audit_date) > today);
       result.nextAuditDate = futureAudit ? futureAudit.next_audit_date : null;
+    } else if (role === 'portfolio' || role === 'sub-portfolio' || role === 'admin') {
+      result.nextAuditDateCount = totals.NextAuditDateCount;
+      result.nextAuditDateIds = totals.NextAuditDateIds;
     }
 
     return result;
@@ -547,6 +411,142 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
     throw new AppError('Failed to calculate metrics.', 500);
   }
 };
+
+// const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, startDate, endDate) => {
+//   try {
+//     let query = {};
+
+//     if (startDate && endDate) {
+//       const start = new Date(startDate);
+//       const end = new Date(endDate);
+//       console.log('Adding date range', start, end);
+
+//       query = {
+//         $and: [{ from: { $lte: end } }, { to: { $gte: start } }],
+//       };
+//     }
+
+//     if (role !== 'admin') {
+//       if (!connectedEntityIds || connectedEntityIds.length === 0) {
+//         throw new AppError('No connected entity IDs provided for this role.', 403);
+//       }
+
+//       const entityQuery = [];
+//       if (role === 'portfolio') entityQuery.push({ portfolio_name: { $in: connectedEntityIds } });
+//       if (role === 'sub-portfolio') entityQuery.push({ sub_portfolio: { $in: connectedEntityIds } });
+//       if (role === 'property') entityQuery.push({ property_name: { $in: connectedEntityIds } });
+
+//       if (entityQuery.length > 0) {
+//         query.$or = entityQuery;
+//       }
+//     } else {
+//       if (selectedPortfolio && selectedPortfolio !== 'all') {
+//         const portfolio = await portfolioModel.findOne({ name: selectedPortfolio });
+//         if (!portfolio) {
+//           throw new AppError(`Portfolio with name "${selectedPortfolio}" not found.`, 404);
+//         }
+//         query.portfolio_name = portfolio._id;
+//       }
+//     }
+
+//     const documents = await sheetDataModel.find(query, {
+//       'expedia.amount_collectable': 1,
+//       'booking.amount_collectable': 1,
+//       'agoda.amount_collectable': 1,
+//       'expedia.amount_confirmed': 1,
+//       'booking.amount_confirmed': 1,
+//       'agoda.amount_confirmed': 1,
+//       from: 1,
+//       to: 1,
+//       next_audit_date: 1,
+//       _id: 1,
+//     });
+
+//     const totals = {
+//       ExpediaValue: 0,
+//       BookingValue: 0,
+//       AgodaValue: 0,
+//       ExpediaConfirmedValue: 0,
+//       BookingConfirmedValue: 0,
+//       AgodaConfirmedValue: 0,
+//       PortfolioCount: documents.length,
+//       NextAuditDateCount: 0,
+//       NextAuditDateIds: [],
+//       PassedAuditDateCount: 0, // Count of past audit dates
+//       PassedAuditDateIds: [], // List of _id's for past audit dates
+//     };
+
+//     const parseCurrency = (value) => {
+//       if (!value) return 0;
+//       const cleanedValue = value.trim().replace(/[^0-9.-]+/g, '');
+//       const parsedValue = parseFloat(cleanedValue);
+//       return isNaN(parsedValue) ? 0 : parsedValue;
+//     };
+
+//     const today = new Date();
+
+//     documents.forEach((doc) => {
+//       const expediaValue = parseCurrency(doc?.expedia?.amount_collectable);
+//       const bookingValue = parseCurrency(doc?.booking?.amount_collectable);
+//       const agodaValue = parseCurrency(doc?.agoda?.amount_collectable);
+//       const expediaConfirmed = parseCurrency(doc?.expedia?.amount_confirmed);
+//       const bookingConfirmed = parseCurrency(doc?.booking?.amount_confirmed);
+//       const agodaConfirmed = parseCurrency(doc?.agoda?.amount_confirmed);
+
+//       totals.ExpediaValue += expediaValue;
+//       totals.BookingValue += bookingValue;
+//       totals.AgodaValue += agodaValue;
+//       totals.ExpediaConfirmedValue += expediaConfirmed;
+//       totals.BookingConfirmedValue += bookingConfirmed;
+//       totals.AgodaConfirmedValue += agodaConfirmed;
+
+//       if (doc.next_audit_date) {
+//         const auditDate = new Date(doc.next_audit_date);
+//         if (auditDate > today) {
+//           totals.NextAuditDateCount += 1;
+//           totals.NextAuditDateIds.push(doc._id);
+//         } else {
+//           totals.PassedAuditDateCount += 1;
+//           totals.PassedAuditDateIds.push(doc._id);
+//         }
+//       }
+//     });
+
+//     const totalReported = totals.ExpediaValue + totals.BookingValue + totals.AgodaValue;
+//     const totalConfirmed = totals.ExpediaConfirmedValue + totals.BookingConfirmedValue + totals.AgodaConfirmedValue;
+//     const formatToTwoDecimals = (value) => parseFloat(value.toFixed(2));
+
+//     const result = {
+//       collectableAmounts: {
+//         expedia: formatToTwoDecimals(totals.ExpediaValue),
+//         booking: formatToTwoDecimals(totals.BookingValue),
+//         agoda: formatToTwoDecimals(totals.AgodaValue),
+//         total: formatToTwoDecimals(totalReported),
+//       },
+//       confirmedAmounts: {
+//         expedia: formatToTwoDecimals(totals.ExpediaConfirmedValue),
+//         booking: formatToTwoDecimals(totals.BookingConfirmedValue),
+//         agoda: formatToTwoDecimals(totals.AgodaConfirmedValue),
+//         total: formatToTwoDecimals(totalConfirmed),
+//       },
+//       totalAudits: totals.PortfolioCount,
+//       nextAuditDateCount: totals.NextAuditDateCount,
+//       nextAuditDateIds: totals.NextAuditDateIds,
+//       passedAuditDateCount: totals.PassedAuditDateCount,
+//       passedAuditDateIds: totals.PassedAuditDateIds,
+//     };
+
+//     if (role === 'property') {
+//       const futureAudit = documents.find((doc) => new Date(doc.next_audit_date) > today);
+//       result.nextAuditDate = futureAudit ? futureAudit.next_audit_date : null;
+//     }
+
+//     return result;
+//   } catch (error) {
+//     console.error('Error in calculateMetrics:', error);
+//     throw new AppError('Failed to calculate metrics.', 500);
+//   }
+// };
 
 module.exports = {
   calculateMetrics,
