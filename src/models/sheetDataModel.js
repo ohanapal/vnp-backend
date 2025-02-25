@@ -18,7 +18,16 @@ const sheetDataSchema = new mongoose.Schema(
     contracts: {
       type: String,
     },
+    username: {
+      type: String,
 
+    },
+    user_email: {
+      type: String,
+    },
+    user_password: {
+      type: String,
+    },
     expedia: {
       expedia_id: { type: String, required: true }, // Expedia ID
       review_status: { type: String }, // Expedia Review Status

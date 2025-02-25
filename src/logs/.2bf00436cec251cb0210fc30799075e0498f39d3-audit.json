@@ -6,34 +6,14 @@
     "auditLog": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/.2bf00436cec251cb0210fc30799075e0498f39d3-audit.json",
     "files": [
         {
-            "date": 1737961865883,
-            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/error-2025-01-27.log",
-            "hash": "83b402a34901654ed87e115663b85220c1f92d1fe769f43ac1505bb7a12c8148"
+            "date": 1739854025709,
+            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/error-2025-02-18.log",
+            "hash": "bf277c6f591c7ef552e7933af5e3246548041aaa4bae62833a020e927e31f41e"
         },
         {
-            "date": 1738479570083,
-            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/error-2025-02-02.log",
-            "hash": "e12e0cce28d7f06a8e425a94bdcb91cf5cdc1413bf896c8231d0b9c2a0dc40d8"
-        },
-        {
-            "date": 1738558965732,
-            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/error-2025-02-03.log",
-            "hash": "809a379932a1da990b74b1359303d387ebcd332f9891047a44043f28e786c345"
-        },
-        {
-            "date": 1738667798643,
-            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/error-2025-02-04.log",
-            "hash": "871be12fa4e26738ad1e0232e7d6029e2928afb433c8d15823e1131160225b16"
-        },
-        {
-            "date": 1738730732060,
-            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/error-2025-02-05.log",
-            "hash": "cfd0252377069d686e01f3e4e506d73fa26600e309ecc744528e44c717541ce5"
-        },
-        {
-            "date": 1739102504187,
-            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/error-2025-02-09.log",
-            "hash": "cdadd128c009e702c792c262e1b90e264494f10ee67b39fbfdb95b4eb1979dc1"
+            "date": 1740479771559,
+            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/error-2025-02-25.log",
+            "hash": "e675c315ff55b550b3a20c6dee72f593cdb7358cf2c5c48ea832697ce1b9066a"
         }
     ],
     "hashType": "sha256"

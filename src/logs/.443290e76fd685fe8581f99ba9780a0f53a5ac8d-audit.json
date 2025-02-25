@@ -6,34 +6,14 @@
     "auditLog": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/.443290e76fd685fe8581f99ba9780a0f53a5ac8d-audit.json",
     "files": [
         {
-            "date": 1737961865880,
-            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-01-27.log",
-            "hash": "6c176273f2df6e78b650b9f098c9ce065fef3c6a1fc5c942f2a8e6d968e52fa1"
+            "date": 1739854025703,
+            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-02-18.log",
+            "hash": "eeae280f6fd74b3c38fe136eb312f3fc38cde66461790409f19d7ab088f5aa31"
         },
         {
-            "date": 1738479570077,
-            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-02-02.log",
-            "hash": "ad19dda4b6bda7d835aa0b8b4c27b3b03263db43bc5b779d15c087efebe1da45"
-        },
-        {
-            "date": 1738558965730,
-            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-02-03.log",
-            "hash": "eb558911e59b90b0d213bb125155f07ca2b30692c31333f8fa0790b2145daef0"
-        },
-        {
-            "date": 1738667798641,
-            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-02-04.log",
-            "hash": "0e6ef36bfc1e0194622d363836feae9c84fa5fbbd95b654be55e8d953c75ef5e"
-        },
-        {
-            "date": 1738730732059,
-            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-02-05.log",
-            "hash": "e73685a89d17bfe6c408f22c4690d526e4844c29cc560aa6e71abad86054aedc"
-        },
-        {
-            "date": 1739102504184,
-            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-02-09.log",
-            "hash": "d3d666b71660d222beea4f6cea7f36d5450f9498f192dfbbf85d9a9e805fca8d"
+            "date": 1740479771555,
+            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/src/logs/application-2025-02-25.log",
+            "hash": "6fd2f2077114a17440bae85382f479267ad16daadc9399f11f3a4ce09bcb3975"
         }
     ],
     "hashType": "sha256"

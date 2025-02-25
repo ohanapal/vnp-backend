@@ -8,7 +8,8 @@ const {
   deleteData, 
   bulkUpload,
   notifyChange,
-  deleteRow
+  deleteRow,
+  updateDatabase
 } = require('../controllers/sheetCRUDController');
 
 // Route to add a new row to a Google Sheet
@@ -25,5 +26,7 @@ router.put('/update-cell', updateCell);
 
 // Route to delete a specific row from a Google Sheet
 router.delete('/delete-data', deleteData);
+
+router.post('/update-database', updateDatabase);
 
 module.exports = router;

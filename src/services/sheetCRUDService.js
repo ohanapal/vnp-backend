@@ -164,9 +164,38 @@ async function updateCell(auth, spreadsheetId, sheetName, rowNumber, columnName,
   }));
 }
 
+
+async function fetchGoogleSheetData(auth, spreadsheetId) {
+  const sheets = google.sheets({ version: "v4", auth });
+  const RANGE = "Sheet1!A:Z";
+
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: RANGE,
+  });
+
+  const rows = response.data.values;
+  if (!rows || rows.length === 0) {
+    throw new Error("No data found in the Google Sheet.");
+  }
+
+  // Process headers, trimming spaces and ignoring empty headers
+  let headers = rows[0].map(header => header.trim()).filter(header => header);
+
+  return rows.slice(1).map(row => {
+    let rowData = {};
+    headers.forEach((header, index) => {
+      rowData[header] = row[index] || "";
+    });
+    return rowData;
+  });
+}
+
+
 module.exports = {
   addRow,
   getData,
   deleteData,
-  updateCell
+  updateCell,
+  fetchGoogleSheetData
 };

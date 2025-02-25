@@ -1,4 +1,4 @@
-const { addRow, getData, deleteData, updateCell } = require('../services/sheetCRUDService');
+const { addRow, getData, deleteData, updateCell, fetchGoogleSheetData } = require('../services/sheetCRUDService');
 const { google } = require('googleapis');
 const SheetData = require('../models/sheetDataModel');
 const WebSocket = require('ws');
@@ -227,6 +227,9 @@ exports.notifyChange = async (req, res) => {
       from: parseDate(rowObject['From']),
       to: parseDate(rowObject['To']),
       next_audit_date: parseDate(rowObject['Next Due Date']),
+      username: rowObject['User Name'],
+      user_email: rowObject['Email User Name'],
+      user_password: rowObject['Password'],
       expedia: {
         expedia_id: rowObject['Expedia ID'],
         review_status: rowObject['Expedia Review Status'],
@@ -470,6 +473,9 @@ exports.bulkUpload = async (req, res) => {
                 from: getCellValue(row, 'From'),
                 to: getCellValue(row, 'To'),
                 next_audit_date: getCellValue(row, 'Next Due Date'),
+                username: getCellValue(row, 'User Name'),
+                user_email: getCellValue(row, 'Email User Name'),
+                user_password: getCellValue(row, 'Password'),
 
                 expedia: {
                   expedia_id: getCellValue(row, 'Expedia ID'),
@@ -621,5 +627,80 @@ exports.deleteData = async (req, res) => {
       error: 'Error deleting row',
       details: error.message,
     });
+  }
+};
+
+exports.updateDatabase = async (req, res) => {
+  const client = await auth.getClient();
+  const sheets = google.sheets({ version: 'v4', auth: client });
+
+  try {
+    const { sheetId } = req.body;
+    if (!sheetId) {
+      return res.status(400).send('Missing required field: sheetId');
+    }
+
+    // Fetch the entire sheet data, including headers
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: sheetId,
+      range: 'Sheet1!A1:Z', // Include header row
+    });
+
+    const rows = response.data.values;
+    if (!rows || rows.length < 2) {
+      return res.status(404).send('No data found in the sheet');
+    }
+
+    // Extract headers and map them to their indices
+    const headers = rows[1];
+    const dataRows = rows.slice(2);
+
+    const getCellValue = (row, headerName) => {
+      const index = headers.indexOf(headerName);
+      const value = index >= 0 ? row[index] || '' : '';
+
+      return value;
+    };
+
+    // Prepare bulk operations for MongoDB
+    const bulkOps = await Promise.all(
+      dataRows.map(async (row, index) => {
+        // console.log('row', row.serial);
+        const uniqueId = getCellValue(row, 'id');
+        if (!uniqueId) {
+          console.log(`Skipping row ${index + 1}: Missing or invalid Serial Number`);
+          return null;
+        }
+
+        return {
+          updateOne: {
+            filter: { unique_id: uniqueId },
+            update: {
+              $set: {
+                username: getCellValue(row, 'User Name'),
+                user_email: getCellValue(row, 'Email User Name'),
+                user_password: getCellValue(row, 'Password'),
+              },
+            },
+            upsert: true,
+          },
+        };
+      }),
+    );
+
+    const result = await SheetData.bulkWrite(bulkOps);
+
+    console.log(`Bulk upload completed. ${bulkOps.length} rows processed.`);
+    res.status(200).send({
+      message: `Bulk upload successful. ${bulkOps.length} rows processed.`,
+      details: {
+        inserted: result.insertedCount,
+        modified: result.modifiedCount,
+        upserted: result.upsertedCount,
+      },
+    });
+  } catch (error) {
+    console.error('Error during bulk upload:', error);
+    res.status(500).send({ message: 'Error during bulk upload', error: error.message });
   }
 };
