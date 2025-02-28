@@ -227,9 +227,7 @@ exports.notifyChange = async (req, res) => {
       from: parseDate(rowObject['From']),
       to: parseDate(rowObject['To']),
       next_audit_date: parseDate(rowObject['Next Due Date']),
-      username: rowObject['User Name'],
-      user_email: rowObject['Email User Name'],
-      user_password: rowObject['Password'],
+      
       expedia: {
         expedia_id: rowObject['Expedia ID'],
         review_status: rowObject['Expedia Review Status'],
@@ -238,18 +236,26 @@ exports.notifyChange = async (req, res) => {
         amount_collectable: rowObject['EXPEDIA AMOUNT COLLECTABLE'],
         additional_revenue: rowObject['Additional Revenue'],
         amount_confirmed: rowObject['EXPEDIA AMOUNT CONFIRMED'],
+        username: rowObject['User Name'],
+        user_email: rowObject['Email User Name'],
+        user_password: rowObject['Password'],
       },
       booking: {
         booking_id: rowObject['Booking ID'],
         review_status: rowObject['Booking.Com Review Status'],
         amount_collectable: rowObject['BOOKING.COM AMOUNT COLLECTABLE'],
         amount_confirmed: rowObject['BOOKING.COM AMOUNT CONFIRMED'],
+        username: rowObject['User Name'],
+        user_password: rowObject['Password'],
+
       },
       agoda: {
         agoda_id: rowObject['Agoda ID'],
         review_status: rowObject['AGODA Review Status'],
         amount_collectable: rowObject['AGODA AMOUNT COLLECTABLE'],
         amount_confirmed: rowObject['AGODA AMOUNT CONFIRMED'],
+        username: rowObject['User Name'],
+        user_password: rowObject['Password'],
       },
     };
 
@@ -473,9 +479,6 @@ exports.bulkUpload = async (req, res) => {
                 from: getCellValue(row, 'From'),
                 to: getCellValue(row, 'To'),
                 next_audit_date: getCellValue(row, 'Next Due Date'),
-                username: getCellValue(row, 'User Name'),
-                user_email: getCellValue(row, 'Email User Name'),
-                user_password: getCellValue(row, 'Password'),
 
                 expedia: {
                   expedia_id: getCellValue(row, 'Expedia ID'),
@@ -485,6 +488,9 @@ exports.bulkUpload = async (req, res) => {
                   amount_collectable: getCellValue(row, 'EXPEDIA AMOUNT COLLECTABLE'),
                   additional_revenue: parseFloat(getCellValue(row, 'Additional Revenue')) || 0,
                   amount_confirmed: getCellValue(row, 'EXPEDIA AMOUNT CONFIRMED'),
+                  username: getCellValue(row, 'User Name'),
+                  user_email: getCellValue(row, 'Email User Name'),
+                  user_password: getCellValue(row, 'Password'),
                 },
 
                 booking: {
@@ -492,6 +498,8 @@ exports.bulkUpload = async (req, res) => {
                   review_status: getCellValue(row, 'Booking.Com Review Status'),
                   amount_collectable: getCellValue(row, 'BOOKING.COM AMOUNT COLLECTABLE'),
                   amount_confirmed: getCellValue(row, 'BOOKING.COM AMOUNT CONFIRMED'),
+                  username: getCellValue(row, 'User Name'),
+                  user_password: getCellValue(row, 'Password'),
                 },
 
                 agoda: {
@@ -499,6 +507,9 @@ exports.bulkUpload = async (req, res) => {
                   review_status: getCellValue(row, 'AGODA Review Status'),
                   amount_collectable: getCellValue(row, 'AGODA AMOUNT COLLECTABLE'),
                   amount_confirmed: getCellValue(row, 'AGODA AMOUNT CONFIRMED'),
+                  username: getCellValue(row, 'User Name'),
+                  user_password: getCellValue(row, 'Password'),
+
                 },
               },
             },
@@ -677,9 +688,34 @@ exports.updateDatabase = async (req, res) => {
             filter: { unique_id: uniqueId },
             update: {
               $set: {
-                username: getCellValue(row, 'User Name'),
-                user_email: getCellValue(row, 'Email User Name'),
-                user_password: getCellValue(row, 'Password'),
+                expedia: {
+                  expedia_id: getCellValue(row, 'Expedia ID'),
+                  review_status: getCellValue(row, 'Expedia Review Status'),
+                  billing_type: getCellValue(row, 'Billing Type'),
+                  remaining_or_direct_billed: getCellValue(row, 'Remaining/Direct Billed'),
+                  amount_collectable: getCellValue(row, 'EXPEDIA AMOUNT COLLECTABLE'),
+                  additional_revenue: parseFloat(getCellValue(row, 'Additional Revenue')) || 0,
+                  amount_confirmed: getCellValue(row, 'EXPEDIA AMOUNT CONFIRMED'),
+                  username: getCellValue(row, 'User Name'),
+                  user_email: getCellValue(row, 'Email User Name'),
+                  user_password: getCellValue(row, 'Password'),
+                },
+                booking: {
+                  booking_id: getCellValue(row, 'Booking ID'),
+                  review_status: getCellValue(row, 'Booking.Com Review Status'),
+                  amount_collectable: getCellValue(row, 'BOOKING.COM AMOUNT COLLECTABLE'),
+                  amount_confirmed: getCellValue(row, 'BOOKING.COM AMOUNT CONFIRMED'),
+                  username: getCellValue(row, 'User Name'),
+                  user_password: getCellValue(row, 'Password'),
+                },
+                agoda: {
+                  agoda_id: getCellValue(row, 'Agoda ID'),
+                  review_status: getCellValue(row, 'AGODA Review Status'),
+                  amount_collectable: getCellValue(row, 'AGODA AMOUNT COLLECTABLE'),
+                  amount_confirmed: getCellValue(row, 'AGODA AMOUNT CONFIRMED'),
+                  username: getCellValue(row, 'User Name'),
+                  user_password: getCellValue(row, 'Password'),
+                },
               },
             },
             upsert: true,
@@ -690,9 +726,9 @@ exports.updateDatabase = async (req, res) => {
 
     const result = await SheetData.bulkWrite(bulkOps);
 
-    console.log(`Bulk upload completed. ${bulkOps.length} rows processed.`);
+    console.log(` upload completed. ${bulkOps.length} rows processed.`);
     res.status(200).send({
-      message: `Bulk upload successful. ${bulkOps.length} rows processed.`,
+      message: ` upload successful. ${bulkOps.length} rows processed.`,
       details: {
         inserted: result.insertedCount,
         modified: result.modifiedCount,
@@ -700,7 +736,69 @@ exports.updateDatabase = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error during bulk upload:', error);
-    res.status(500).send({ message: 'Error during bulk upload', error: error.message });
+    console.error('Error during upload:', error);
+    res.status(500).send({ message: 'Error during upload', error: error.message });
+  }
+};
+
+
+exports.showsomefield = async (req, res) => {
+  const client = await auth.getClient();
+  const sheets = google.sheets({ version: 'v4', auth: client });
+
+  try {
+    const { sheetId } = req.body;
+    if (!sheetId) {
+      return res.status(400).send('Missing required field: sheetId');
+    }
+
+    // Fetch the entire sheet data, including headers
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: sheetId,
+      range: 'Sheet1!A1:Z', // Include header row
+    });
+
+    const rows = response.data.values;
+    if (!rows || rows.length < 2) {
+      return res.status(404).send('No data found in the sheet');
+    }
+
+    // Extract headers and map them to their indices
+    const headers = rows[1];
+    const dataRows = rows.slice(2);
+
+    const getCellValue = (row, headerName) => {
+      const index = headers.indexOf(headerName);
+      const value = index >= 0 ? row[index] || '' : '';
+      return value;
+    };
+
+    // Prepare data with email fields
+    const emailData = dataRows.map((row, index) => {
+      const uniqueId = getCellValue(row, 'id');
+      if (!uniqueId) {
+        console.log(`Skipping row ${index + 1}: Missing or invalid Serial Number`);
+        return null;
+      }
+
+      return {
+        id: uniqueId,
+        expedia_email: getCellValue(row, 'EXPEDIA Email Assoicated'),
+        property_email: getCellValue(row, 'Property Contact Email'),
+        portfolio_email: getCellValue(row, 'Portfolio Contact Email'),
+        multi_email: getCellValue(row, 'Multiple Portfolio Email Address'),
+      };
+    }).filter(item => item !== null);
+
+    
+
+    res.status(200).send({ 
+      message: 'Email data retrieved successfully', 
+      total_records: emailData.length,
+      data: emailData,
+    });
+  } catch (error) {
+    console.error('Error retrieving email data:', error);
+    res.status(500).send({ message: 'Error retrieving email data', error: error.message });
   }
 };

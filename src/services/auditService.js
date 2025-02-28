@@ -37,7 +37,13 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
       if (search) {
         const matchingPortfolios = await portfolioModel.find({ name: { $regex: search, $options: 'i' } });
         const matchingPortfolioIds = matchingPortfolios.map((portfolio) => portfolio._id);
-        query.portfolio_name = { $in: matchingPortfolioIds };
+        const matchingProperties = await propertyModel.find({
+          name: { $regex: search, $options: 'i' },
+        });
+        const matchingPropertyIds = matchingProperties.map((property) => property._id);
+
+        // Apply both filters
+        query.$or = [{ portfolio_name: { $in: matchingPortfolioIds } }, { property_name: { $in: matchingPropertyIds } }];
       }
       // Apply portfolio filter
       if (filters?.portfolio) {
@@ -88,17 +94,37 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
         query.property_name = { $in: connectedEntityIds };
       }
       // Apply search filter if provided (for non-admin roles)
+      // Apply search filter if provided (for non-admin roles)
       if (search) {
         const matchingPortfolios = await portfolioModel.find({ name: { $regex: search, $options: 'i' } });
         const matchingPortfolioIds = matchingPortfolios.map((portfolio) => portfolio._id);
+
+        const matchingProperties = await propertyModel.find({
+          name: { $regex: search, $options: 'i' },
+        });
+        const matchingPropertyIds = matchingProperties.map((property) => property._id);
+
         if (role === 'portfolio') {
-          query.portfolio_name = { $in: matchingPortfolioIds.filter((id) => connectedEntityIds.includes(id)) };
+          // Only show portfolios that match both the search AND are in connectedEntityIds
+          query.portfolio_name = {
+            $in: matchingPortfolioIds.filter((id) =>
+              connectedEntityIds.some((connId) => connId.toString() === id.toString()),
+            ),
+          };
         } else if (role === 'sub-portfolio') {
-          query.sub_portfolio = { $in: connectedEntityIds };
-          query.portfolio_name = { $in: matchingPortfolioIds };
+          // Keep the existing sub-portfolio restriction
+          // Add search constraints as an $or condition
+          query.$and = [
+            { sub_portfolio: { $in: connectedEntityIds } },
+            { $or: [{ portfolio_name: { $in: matchingPortfolioIds } }, { property_name: { $in: matchingPropertyIds } }] },
+          ];
         } else if (role === 'property') {
-          query.property_name = { $in: connectedEntityIds };
-          query.portfolio_name = { $in: matchingPortfolioIds };
+          // Keep the existing property restriction
+          // Add search constraints as an $or condition
+          query.$and = [
+            { property_name: { $in: connectedEntityIds } },
+            { $or: [{ portfolio_name: { $in: matchingPortfolioIds } }, { property_name: { $in: matchingPropertyIds } }] },
+          ];
         }
       }
       // Date range filter

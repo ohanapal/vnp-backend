@@ -18,16 +18,7 @@ const sheetDataSchema = new mongoose.Schema(
     contracts: {
       type: String,
     },
-    username: {
-      type: String,
-
-    },
-    user_email: {
-      type: String,
-    },
-    user_password: {
-      type: String,
-    },
+   
     expedia: {
       expedia_id: { type: String, required: true }, // Expedia ID
       review_status: { type: String }, // Expedia Review Status
@@ -36,6 +27,16 @@ const sheetDataSchema = new mongoose.Schema(
       amount_collectable: { type: String }, // Expedia Amount Reported to Property
       additional_revenue: { type: String }, // Additional Revenue
       amount_confirmed: { type: String }, // Expedia Amount Confirmed by Property
+      username: {
+        type: String,
+  
+      },
+      user_email: {
+        type: String,
+      },
+      user_password: {
+        type: String,
+      },
     },
 
     booking: {
@@ -43,6 +44,13 @@ const sheetDataSchema = new mongoose.Schema(
       review_status: { type: String }, // Booking.com Review Status
       amount_collectable: { type: String }, // Booking.com Amount to be Claimed
       amount_confirmed: { type: String }, // Booking.com Amount Confirmed by Property
+      username: {
+        type: String,
+  
+      },
+      user_password: {
+        type: String,
+      },
     },
 
     agoda: {
@@ -50,6 +58,12 @@ const sheetDataSchema = new mongoose.Schema(
       review_status: { type: String }, // Agoda Review Status
       amount_collectable: { type: String }, // Amount to be Claimed From Agoda
       amount_confirmed: { type: String }, // Amount Confirmed by Property
+      username: {
+        type: String,
+      },
+      user_password: {
+        type: String,
+      },
     },
   },
   {
