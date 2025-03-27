@@ -25,9 +25,9 @@ router.route('/verify-otp').post(verifyOTP);
 
 // Other routes
 router.route('/invite-user').post(authMiddleware('admin', 'sub-portfolio', 'portfolio', 'property'), inviteUser);
-router.route('/verify-invitation').post(verifyUserInvitation);
+router.route('/verify-user').post(verifyUserInvitation);
 router.route('/reset-password').post(resetPassword);
-router.route('/forget-password').post(sendForgetPasswordOTP);
+router.route('/forgot-password-otp').post(sendForgetPasswordOTP);
 
 // User management routes
 router.put('/own-profile', authMiddleware('admin', 'portfolio', 'sub-portfolio', 'property'), updateOwnProfile);

@@ -31,3 +31,7 @@
 2025-03-27 14:43:25 [[31merror[39m]: Invalid password {"statusCode":401,"status":"fail","isOperational":true}
 2025-03-27 14:43:42 [[31merror[39m]: Login failed {"email":"smahadalichowdhury@gmail.com","error":"Invalid password"}
 2025-03-27 14:43:42 [[31merror[39m]: Invalid password {"statusCode":400,"status":"fail","isOperational":true}
+2025-03-27 21:28:05 [[31merror[39m]: Can't find /api/users/verify-user on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-03-27 21:30:32 [[31merror[39m]: Can't find /api/users/forgot-password-otp on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-03-27 21:34:33 [[31merror[39m]: Login failed {"email":"fixederror1@gmail.com","error":"Invalid password"}
+2025-03-27 21:34:33 [[31merror[39m]: Invalid password {"statusCode":400,"status":"fail","isOperational":true}

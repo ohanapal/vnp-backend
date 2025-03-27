@@ -20,7 +20,7 @@ const SendEmailUtils = async (EmailTo, EmailText, EmailSubject) => {
 
   // send mail with defined transport object
   let mailOptions = {
-    from: 'VNP Team <team@getnetworth.app>',
+    from: 'VNP Team <team@vnp.app>',
     to: EmailTo, // list of receivers
     subject: EmailSubject, // Subject line
     text: EmailText, // plain text body
