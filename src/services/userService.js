@@ -69,7 +69,7 @@ exports.loginUser = async (userData) => {
 
   if (!isPasswordValid) {
     logger.warn('Invalid password', { email });
-    throw new AppError('Invalid password', 401);
+    throw new AppError('Invalid password', 400);
   }
 
   // Generate and send OTP for all logins

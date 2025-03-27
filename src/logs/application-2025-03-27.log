@@ -32,3 +32,15 @@
 2025-03-27 13:07:59 [[31merror[39m]: This verification code has already been used. Please request a new code by logging in again. {"statusCode":401,"status":"fail","isOperational":true}
 2025-03-27 13:08:00 [[31merror[39m]: OTP verification failed {"error":"This verification code has already been used. Please request a new code by logging in again."}
 2025-03-27 13:08:00 [[31merror[39m]: This verification code has already been used. Please request a new code by logging in again. {"statusCode":401,"status":"fail","isOperational":true}
+2025-03-27 14:41:14 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
+2025-03-27 14:41:14 [[33mwarn[39m]: Invalid password {"email":"smahadalichowdhury@gmail.com"}
+2025-03-27 14:41:14 [[31merror[39m]: Login failed {"email":"smahadalichowdhury@gmail.com","error":"Invalid password"}
+2025-03-27 14:41:14 [[31merror[39m]: Invalid password {"statusCode":401,"status":"fail","isOperational":true}
+2025-03-27 14:43:25 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
+2025-03-27 14:43:25 [[33mwarn[39m]: Invalid password {"email":"smahadalichowdhury@gmail.com"}
+2025-03-27 14:43:25 [[31merror[39m]: Login failed {"email":"smahadalichowdhury@gmail.com","error":"Invalid password"}
+2025-03-27 14:43:25 [[31merror[39m]: Invalid password {"statusCode":401,"status":"fail","isOperational":true}
+2025-03-27 14:43:41 [[32minfo[39m]: Login request received {"email":"smahadalichowdhury@gmail.com"}
+2025-03-27 14:43:42 [[33mwarn[39m]: Invalid password {"email":"smahadalichowdhury@gmail.com"}
+2025-03-27 14:43:42 [[31merror[39m]: Login failed {"email":"smahadalichowdhury@gmail.com","error":"Invalid password"}
+2025-03-27 14:43:42 [[31merror[39m]: Invalid password {"statusCode":400,"status":"fail","isOperational":true}
