@@ -14,26 +14,29 @@ exports.registerAdmin = async (req, res) => {
 };
 exports.loginUser = async (req, res, next) => {
   try {
-    // Log the login request
     logger.info('Login request received', { email: req.body.email });
 
-    // Call the service to log the user in
-    const user = await userService.loginUser(req.body);
+    const result = await userService.loginUser(req.body);
+    // console.log("result", result)
+    // If 2FA is required, return the partial login response
+    if (result.requiresOTP) {
+      return res.status(200).json({
+        message: result.message,
+        requiresOTP: true,
+        userId: result.userId
+      });
+    }
 
-    // Log successful login
-    logger.info('Login successful', { userId: user.user._id, email: req.body.email });
+    // Normal login success response
+    logger.info('Login successful', { userId: result.user._id, email: req.body.email });
 
-    // Send back the user and access token
     res.status(200).json({
       message: 'Login successful',
-      user: user.user,
-      accessToken: user.accessToken,
+      user: result.user,
+      accessToken: result.accessToken,
     });
   } catch (error) {
-    // Log the error
     logger.error('Login failed', { email: req.body.email, error: error.message });
-
-    // Forward the error to the centralized error handler
     next(error);
   }
 };
@@ -191,5 +194,43 @@ exports.getAllPortfoliosSubPortfoliosProperties = async (req, res) => {
     return res.status(200).json(allPortfolios);
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Verify OTP for 2FA
+exports.verifyOTP = async (req, res, next) => {
+  try {
+    const { userId, otp } = req.body;
+
+    if (!userId || !otp) {
+      throw new AppError('User ID and OTP are required', 400);
+    }
+
+    const result = await userService.verifyOTP(userId, otp);
+
+    res.status(200).json({
+      message: 'OTP verified successfully',
+      user: result.user,
+      accessToken: result.accessToken
+    });
+  } catch (error) {
+    logger.error('OTP verification failed', { error: error.message });
+    next(error);
+  }
+};
+
+// Update 2FA settings
+exports.updateTwoFactorAuth = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const result = await userService.updateTwoFactorAuth(userId, req.body);
+
+    res.status(200).json({
+      message: '2FA settings updated successfully',
+      user: result
+    });
+  } catch (error) {
+    logger.error('Failed to update 2FA settings', { error: error.message });
+    next(error);
   }
 };

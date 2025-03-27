@@ -14,27 +14,32 @@ const {
   updateOwnProfile,
   getAllPortfoliosSubPortfoliosProperties,
   sendForgetPasswordOTP,
+  verifyOTP,
 } = require('../controllers/userController');
 const { authMiddleware } = require('../middlewares/authMiddleware');
-// Route for creating a new user and getting all users
+
+// Auth routes
 router.route('/admin-register').post(registerAdmin);
 router.route('/login').post(loginUser);
+router.route('/verify-otp').post(verifyOTP);
+
+// Other routes
 router.route('/invite-user').post(authMiddleware('admin', 'sub-portfolio', 'portfolio', 'property'), inviteUser);
-router.route('/verify-user').post(verifyUserInvitation);
+router.route('/verify-invitation').post(verifyUserInvitation);
 router.route('/reset-password').post(resetPassword);
-// router.get(authMiddleware('admin', 'portfolio', 'sub-portfolio', 'property'), getAllUsers);
-router.get('/', authMiddleware('admin', 'sub-portfolio', 'portfolio', 'property'), getAllUsers);
+router.route('/forget-password').post(sendForgetPasswordOTP);
 
-router.post('/forgot-password-otp', sendForgetPasswordOTP);
-
-router.put('/update/:id', authMiddleware('admin'), updateUser); //Only admins and managers can update users
-router.delete('/delete/:id', authMiddleware('admin'), deleteUser); //Only admins and managers can update users
-
+// User management routes
 router.put('/own-profile', authMiddleware('admin', 'portfolio', 'sub-portfolio', 'property'), updateOwnProfile);
+router
+  .route('/users/:id')
+  .put(authMiddleware('admin'), updateUser)
+  .delete(authMiddleware('admin'), deleteUser);
 
+router.get('/users', authMiddleware('admin', 'portfolio', 'sub-portfolio', 'property'), getAllUsers);
 router.get(
-  '/get-all',
-  authMiddleware('admin', 'sub-portfolio', 'portfolio', 'property'),
+  '/all-portfolios-sub-portfolios-properties',
+  authMiddleware('admin', 'portfolio', 'sub-portfolio', 'property'),
   getAllPortfoliosSubPortfoliosProperties,
 );
 

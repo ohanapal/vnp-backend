@@ -14,6 +14,8 @@ const SubPortfolio = require('../models/subPortfolioModel');
 const { ObjectId } = require('mongodb');
 const logger = require('../utils/logger'); // Import the logger
 const sheetDataModel = require('../models/sheetDataModel');
+const OTP = require('../models/otpModel');
+
 
 exports.createAdmin = async (userData) => {
   const { password, ...otherData } = userData; // Destructure password from other user data
@@ -47,10 +49,8 @@ exports.createAdmin = async (userData) => {
 exports.loginUser = async (userData) => {
   const { email, password } = userData;
 
-  // Log the start of the login process
   logger.debug('Searching for user in database', { email });
 
-  // Find the user by email
   const user = await User.findOne({ email });
 
   if (!user) {
@@ -63,10 +63,8 @@ exports.loginUser = async (userData) => {
     throw new AppError('User not verified', 403);
   }
 
-  // Log password validation process
   logger.debug('Validating user password', { email });
 
-  // Compare the password with the hashed password stored in the database
   const isPasswordValid = await bcrypt.compare(password, user.password);
 
   if (!isPasswordValid) {
@@ -74,14 +72,80 @@ exports.loginUser = async (userData) => {
     throw new AppError('Invalid password', 401);
   }
 
-  // Remove the password from the user object before returning it
+  // Generate and send OTP for all logins
+  const otp = await generateAndSaveOTP(user._id);
+  await sendOTP(user.email, otp);
+
+  // Return partial login success, requiring OTP verification
+  return {
+    requiresOTP: true,
+    userId: user._id,
+    message: 'OTP sent to your email',
+  };
+};
+
+// Generate and save OTP
+const generateAndSaveOTP = async (userId) => {
+  // Generate a 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  // Save OTP to database
+  await OTP.create({
+    userId,
+    otp: await bcrypt.hash(otp, 10)
+  });
+
+  return otp;
+};
+
+// Send OTP via email
+const sendOTP = async (email, otp) => {
+  await SendEmailUtils(
+    email,
+    `Your login verification code is: ${otp}`,
+    'Login Verification Code'
+  );
+};
+
+// Verify OTP
+exports.verifyOTP = async (userId, otpInput) => {
+  // First check if there's any recent valid OTP (used or unused)
+  const recentOTP = await OTP.findOne({ 
+    userId,
+    createdAt: { $gt: new Date(Date.now() - 5 * 60 * 1000) } // within last 5 minutes
+  }).sort({ createdAt: -1 });
+
+  // If no recent OTP exists at all
+  if (!recentOTP) {
+    throw new AppError('Your verification code has expired. Please request a new code by logging in again.', 400);
+  }
+
+  // Now get the most recent unused OTP
+  const otpRecord = await OTP.findOne({ 
+    userId,
+    used: { $ne: true }  // Only get unused OTPs
+  }).sort({ createdAt: -1 });
+
+  // If recent OTP exists but no unused OTP found
+  if (recentOTP && !otpRecord) {
+    throw new AppError('This verification code has already been used. Please request a new code by logging in again.', 401);
+  }
+
+  const isValidOTP = await bcrypt.compare(otpInput, otpRecord.otp);
+  
+  if (!isValidOTP) {
+    throw new AppError('Invalid verification code. Please check and try again.', 401);
+  }
+
+  // Mark the OTP as used instead of deleting it
+  await OTP.findByIdAndUpdate(otpRecord._id, { used: true });
+
+  // Get user data
+  const user = await User.findById(userId);
   const userWithoutPassword = user.toObject();
   delete userWithoutPassword.password;
 
-  // Log the JWT generation
-  logger.debug('Generating JWT token', { email, userId: user._id });
-
-  // Generate JWT token if password is correct
+  // Generate JWT token
   const accessToken = jwt.sign(
     {
       userId: user._id,
@@ -91,8 +155,6 @@ exports.loginUser = async (userData) => {
     process.env.SECRET_KEY,
     { expiresIn: process.env.JWT_EXPIRES_IN },
   );
-
-  logger.info('Token generated successfully', { email, userId: user._id });
 
   return { user: userWithoutPassword, accessToken };
 };
@@ -269,229 +331,6 @@ exports.sendForgetPasswordOTP = async (userData) => {
     data: user,
   };
 };
-
-// exports.getAllUsers = async (
-//   page = 1,
-//   limit = 10,
-//   currentUserId,
-//   role,
-//   searchQuery = '',
-//   portfolio,
-//   subPortfolio,
-//   property,
-//   roleFilter, // New parameter for role filter
-//   connectedEntityIds,
-// ) => {
-//   const skip = (page - 1) * limit;
-//   let query = {};
-
-//   // console.log('Initial query object:', query);
-
-//   // if (role !== 'admin') {
-//   //   query.$or = [{ invited_user: new ObjectId(currentUserId) }, { _id: new ObjectId(currentUserId) }];
-//   //   // console.log('Query after role check:', query);
-//   // }
-
-//   if (role !== 'admin') {
-//     query.$or = [{ invited_user: new ObjectId(currentUserId) }, { _id: new ObjectId(currentUserId) }];
-
-//     // Exclude if role is 'admin'
-//     query.role = { $ne: 'admin' };
-//     // console.log('Query after excluding admin:', query);
-//   }
-
-//   // If there's a search query, apply the search to the collections and user fields
-//   // if (searchQuery) {
-//   //   if (role === 'admin') {
-//   //     // Admins can search across all data
-//   //     query.$or = [
-//   //       { name: { $regex: searchQuery, $options: 'i' } },
-//   //       { email: { $regex: searchQuery, $options: 'i' } },
-//   //       { phone: { $regex: searchQuery, $options: 'i' } },
-//   //       { role: { $regex: searchQuery, $options: 'i' } },
-//   //     ];
-
-//   //     // Search in Portfolio, Property, and SubPortfolio collections
-//   //     const [portfolioMatches, propertyMatches, subPortfolioMatches] = await Promise.all([
-//   //       Portfolio.find({ name: { $regex: searchQuery, $options: 'i' } }).select('_id'),
-//   //       Property.find({ name: { $regex: searchQuery, $options: 'i' } }).select('_id'),
-//   //       SubPortfolio.find({ name: { $regex: searchQuery, $options: 'i' } }).select('_id'),
-//   //     ]);
-
-//   //     // Collect all matching IDs from entities
-//   //     const matchedEntityIds = [
-//   //       ...portfolioMatches.map((p) => p._id.toString()),
-//   //       ...propertyMatches.map((p) => p._id.toString()),
-//   //       ...subPortfolioMatches.map((p) => p._id.toString()),
-//   //     ];
-
-//   //     // Find users whose connected_entity_id matches the entity IDs found above
-//   //     const userIdsFromEntities = await User.find({
-//   //       connected_entity_id: { $in: matchedEntityIds },
-//   //     }).select('_id');
-
-//   //     // Add the user IDs of matching connected entities to the search query
-//   //     query.$or.push({ _id: { $in: userIdsFromEntities.map((user) => user._id) } });
-//   //   } else {
-//   //     // Non-admin users: Search only in their own data (connected entities and user-specific fields)
-//   //     query.$or = [
-//   //       { name: { $regex: searchQuery, $options: 'i' } },
-//   //       { email: { $regex: searchQuery, $options: 'i' } },
-//   //       { phone: { $regex: searchQuery, $options: 'i' } },
-//   //       { role: { $regex: searchQuery, $options: 'i' } },
-//   //       { _id: new ObjectId(currentUserId) }, // Search only for the current user's ID
-//   //     ];
-
-//   //     // Optional: You can add additional filters here if needed, e.g., for specific portfolio, subPortfolio, or property
-//   //     if (portfolio) {
-//   //       query['connected_entity_id.portfolio'] = { $in: [portfolio] };
-//   //     }
-//   //     if (subPortfolio) {
-//   //       query['connected_entity_id.subPortfolio'] = { $in: [subPortfolio] };
-//   //     }
-//   //     if (property) {
-//   //       query['connected_entity_id.property'] = { $in: [property] };
-//   //     }
-//   //   }
-//   // }
-
-//   if (searchQuery) {
-//     if (role === 'admin') {
-//       // Admin search logic (unchanged)
-//       query.$or = [
-//         { name: { $regex: searchQuery, $options: 'i' } },
-//         { email: { $regex: searchQuery, $options: 'i' } },
-//         { phone: { $regex: searchQuery, $options: 'i' } },
-//         { role: { $regex: searchQuery, $options: 'i' } },
-//       ];
-
-//       // Search portfolios, properties, sub-portfolios
-//       const [portfolioMatches, propertyMatches, subPortfolioMatches] = await Promise.all([
-//         Portfolio.find({ name: { $regex: searchQuery, $options: 'i' } }).select('_id'),
-//         Property.find({ name: { $regex: searchQuery, $options: 'i' } }).select('_id'),
-//         SubPortfolio.find({ name: { $regex: searchQuery, $options: 'i' } }).select('_id'),
-//       ]);
-
-//       const matchedEntityIds = [
-//         ...portfolioMatches.map((p) => p._id.toString()),
-//         ...propertyMatches.map((p) => p._id.toString()),
-//         ...subPortfolioMatches.map((p) => p._id.toString()),
-//       ];
-
-//       const userIdsFromEntities = await User.find({
-//         connected_entity_id: { $in: matchedEntityIds },
-//       }).select('_id');
-
-//       query.$or.push({ _id: { $in: userIdsFromEntities.map((user) => user._id) } });
-//     } else {
-//       // Non-admin users: Restrict search strictly
-//       query.$or = [
-//         { name: { $regex: searchQuery, $options: 'i' }, invited_user: new ObjectId(currentUserId) },
-//         { email: { $regex: searchQuery, $options: 'i' }, invited_user: new ObjectId(currentUserId) },
-//         { phone: { $regex: searchQuery, $options: 'i' }, invited_user: new ObjectId(currentUserId) },
-//       ];
-
-//       // Restrict by connected entities
-//       if (portfolio) {
-//         query['connected_entity_id.portfolio'] = {
-//           $in: connectedEntityIds,
-//         };
-//       }
-//       if (subPortfolio) {
-//         query['connected_entity_id.subPortfolio'] = {
-//           $in: connectedEntityIds,
-//         };
-//       }
-//       if (property) {
-//         query['connected_entity_id.property'] = {
-//           $in: connectedEntityIds,
-//         };
-//       }
-
-//       // Default restriction if no specific entity type is provided
-//       if (!portfolio && !subPortfolio && !property) {
-//         query['connected_entity_id'] = { $in: connectedEntityIds };
-//       }
-//     }
-//   }
-
-//   // **Add the new role filter** if provided
-//   if (roleFilter) {
-//     query.role = roleFilter; // Add this line to filter by role
-//   }
-
-//   // Construct filter conditions for the "connected_entity_id" array.
-//   let connectedEntityConditions = [];
-//   if (portfolio) {
-//     connectedEntityConditions.push(portfolio);
-//     // console.log('Added portfolio to connectedEntityConditions:', connectedEntityConditions);
-//   }
-//   if (subPortfolio) {
-//     connectedEntityConditions.push(subPortfolio);
-//     // console.log('Added subPortfolio to connectedEntityConditions:', connectedEntityConditions);
-//   }
-//   if (property) {
-//     connectedEntityConditions.push(property);
-//     // console.log('Added property to connectedEntityConditions:', connectedEntityConditions);
-//   }
-
-//   // If there are any filters, use $in to check if any of the values are in connected_entity_id.
-//   if (connectedEntityConditions.length > 0) {
-//     query['connected_entity_id'] = { $in: connectedEntityConditions };
-//     // console.log('Query after adding connected_entity_id filter:', query);
-//   }
-
-//   console.log("query:", query);
-//   // Fetch users and total count
-//   const [users, total] = await Promise.all([User.find(query).skip(skip).limit(limit).lean(), User.countDocuments(query)]);
-//   // console.log('Fetched users:', users);
-//   // console.log('Total users count:', total);
-
-//   const transformedUsers = await Promise.all(
-//     users.map(async (user) => {
-//       // console.log('Processing user:', user);
-
-//       // If connected_entity_id exists and contains values
-//       if (user.connected_entity_id && user.connected_entity_id.length > 0) {
-//         let entityNames = [];
-
-//         // Fetch entity names based on the user's role
-//         if (user.role === 'portfolio') {
-//           // console.log('Fetching Portfolio names for user:', user);
-//           entityNames = await Portfolio.find({ _id: { $in: user.connected_entity_id } }).select('name');
-//         } else if (user.role === 'property') {
-//           // console.log('Fetching Property names for user:', user);
-//           entityNames = await Property.find({ _id: { $in: user.connected_entity_id } }).select('name');
-//         } else if (user.role === 'sub-portfolio') {
-//           // console.log('Fetching SubPortfolio names for user:', user);
-//           entityNames = await SubPortfolio.find({ _id: { $in: user.connected_entity_id } }).select('name');
-//         }
-
-//         // console.log('Entity names for user:', entityNames);
-
-//         // Replace connected_entity_id with just the names
-//         user.connected_entity_id = entityNames.map((entity) => entity.name);
-//         // console.log('Updated connected_entity_id with names:', user.connected_entity_id);
-//       }
-
-//       // Remove the password field for security
-//       delete user.password;
-//       // console.log('User after removing password:', user);
-
-//       return user;
-//     }),
-//   );
-
-//   return {
-//     success: true,
-//     data: transformedUsers,
-//     pagination: {
-//       currentPage: page,
-//       totalPages: Math.ceil(total / limit),
-//       totalItems: total,
-//     },
-//   };
-// };
 
 exports.getAllUsers = async (
   page = 1,
