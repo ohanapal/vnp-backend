@@ -217,9 +217,68 @@ exports.inviteUser = async (userData, id, currentUserRole) => {
   const confirmationToken = generateLink(email);
   console.log('Confirmation link: ' + confirmationToken);
   // Send the temporary password via email
-  const emailMessage = `Your Temporary Password is: ${tempPassword}. Click here to confirm your invitation: ${confirmationToken}`;
-  const emailSubject = 'VNP';
-  const emailSend = await SendEmailUtils(email, emailMessage, emailSubject);
+  // const emailMessage = `Your Temporary Password is: ${tempPassword}. Click here to confirm your invitation: ${confirmationToken}`;
+  const emailMessage = `Hi ${user.name},
+  Welcome to VNP Solutions! We’re excited to have you on board.
+  You’ve been invited to access the VNP Solutions Dashboard, where you can track audit progress, view reports, and manage reconciliation activities seamlessly.
+  To get started:
+  👉 Click here to activate your account: ${confirmationToken}
+  👉 Your temporary password is: ${tempPassword}
+  Need help?
+  If you have any questions or need support getting started, our team is here to assist you every step of the way. Simply reply to this email or reach out to sales@vnpsolutions.com.
+  We look forward to helping you recover every eligible dollar—efficiently and effortlessly.
+  Warm regards,
+  VNP Solutions Team`
+
+  const emailHTML = `<body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f4; color: #333333; line-height: 1.6;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <tr>
+            <td style="padding: 30px 20px; text-align: center; background-color: #ffffff; border-bottom: 1px solid #eeeeee;">
+                <!-- Logo Placeholder -->
+                <img src="https://argobot-bucket.s3.us-east-2.amazonaws.com/VNP+LOGO_PNG.png" alt="VNP Solutions Logo" style="max-width: 200px; height: auto;">
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 30px 30px 20px 30px;">
+                <h1 style="margin: 0 0 20px 0; font-size: 24px; line-height: 32px; font-weight: 700; color: #333333;">Hi ${user.name},</h1>
+                <p style="margin: 0 0 20px 0; font-size: 16px;">Welcome to VNP Solutions! We're excited to have you on board.</p>
+                <p style="margin: 0 0 20px 0; font-size: 16px;">You've been invited to access the VNP Solutions Dashboard, where you can track audit progress, view reports, and manage reconciliation activities seamlessly.</p>
+                
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 30px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
+                    <tr>
+                        <td>
+                            <p style="margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">To get started:</p>
+                            <p style="margin: 0 0 15px 0; font-size: 16px;">👉 <a href="${confirmationToken}" style="color: #0066cc; text-decoration: none; font-weight: 500;">Click here to activate your account</a></p>
+                            <p style="margin: 0; font-size: 16px;">👉 Your temporary password is: <span style="font-family: monospace; background-color: #eeeeee; padding: 2px 6px; border-radius: 4px;">${tempPassword}</span></p>
+                        </td>
+                    </tr>
+                </table>
+                
+                <h2 style="margin: 30px 0 15px 0; font-size: 20px; line-height: 28px; font-weight: 600; color: #333333;">Need help?</h2>
+                <p style="margin: 0 0 20px 0; font-size: 16px;">If you have any questions or need support getting started, our team is here to assist you every step of the way. Simply reply to this email or reach out to <a href="mailto:sales@vnpsolutions.com" style="color: #0066cc; text-decoration: none;">sales@vnpsolutions.com</a>.</p>
+                
+                <p style="margin: 30px 0 15px 0; font-size: 16px;">We look forward to helping you recover every eligible dollar—efficiently and effortlessly.</p>
+                
+                <p style="margin: 0 0 10px 0; font-size: 16px;">Warm regards,<br>VNP Solutions Team</p>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 0;">
+                <!-- Promotional Image -->
+                <img src="https://argobot-bucket.s3.us-east-2.amazonaws.com/vnp-stock.jpeg" alt="Discover VNP Solutions" style="width: 100%; height: auto; display: block;">
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 20px; text-align: center; background-color: #f8f9fa; font-size: 14px; color: #666666;">
+                <p style="margin: 0 0 10px 0;">©️ 2025 VNP Solutions. All rights reserved.</p>
+                
+            </td>
+        </tr>
+    </table>
+</body>
+`
+  const emailSubject = 'Welcome to VNP Solutions – Your Dashboard Access Awaits';
+  const emailSend = await SendEmailUtils(email, emailMessage, emailSubject, emailHTML);
   console.log(emailSend);
 
   // Log the generated temporary password (OTP)

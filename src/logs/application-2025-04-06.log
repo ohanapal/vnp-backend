@@ -1,0 +1,2 @@
+2025-04-06 11:29:54 [[31merror[39m]: Unauthorized {"statusCode":401,"status":"fail","isOperational":true}
+2025-04-06 11:30:29 [[32minfo[39m]: Login request received {"email":"vnp@admin.com"}
