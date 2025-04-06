@@ -74,6 +74,7 @@ exports.loginUser = async (userData) => {
 
   // Generate and send OTP for all logins
   const otp = await generateAndSaveOTP(user._id);
+  console.log('Generated OTP:', otp); // Log the generated OTP for debugging
   await sendOTP(user.email, otp);
 
   // Return partial login success, requiring OTP verification
@@ -94,7 +95,7 @@ const generateAndSaveOTP = async (userId) => {
     userId,
     otp: await bcrypt.hash(otp, 10)
   });
-
+console.log('Generated OTP:', otp); // Log the generated OTP for debugging
   return otp;
 };
 
