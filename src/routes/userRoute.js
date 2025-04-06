@@ -32,7 +32,7 @@ router.route('/forgot-password-otp').post(sendForgetPasswordOTP);
 // User management routes
 router.put('/own-profile', authMiddleware('admin', 'portfolio', 'sub-portfolio', 'property'), updateOwnProfile);
 router
-  .route('/users/:id')
+  .route('/:id')
   .put(authMiddleware('admin'), updateUser)
   .delete(authMiddleware('admin'), deleteUser);
 
