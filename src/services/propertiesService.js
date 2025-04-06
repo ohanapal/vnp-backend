@@ -93,6 +93,7 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
     }
 
     // Fetch sheet data
+    console.log(query)
     const sheetData = await sheetDataModel
       .find(query)
       .populate('portfolio_name', 'name')

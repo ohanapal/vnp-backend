@@ -1,1 +1,15 @@
 2025-04-06 11:29:54 [[31merror[39m]: Unauthorized {"statusCode":401,"status":"fail","isOperational":true}
+2025-04-06 11:49:55 [[31merror[39m]: Can't find /api/users?page=1&limit=10 on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-04-06 11:52:33 [[31merror[39m]: Can't find /api/users/get-all?setRole=property&search=hotel on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-04-06 11:53:39 [[31merror[39m]: Can't find /api/users?page=1&limit=10 on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-04-06 11:53:41 [[31merror[39m]: Can't find /api/users?page=1&limit=10 on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-04-06 11:53:42 [[31merror[39m]: Can't find /api/users?page=1&limit=10 on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-04-06 11:54:06 [[31merror[39m]: Can't find /api/users/get-all?setRole=property&search=hotel on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-04-06 11:54:08 [[31merror[39m]: Can't find /api/users/get-all?setRole=property&search=hotel on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-04-06 11:56:05 [[31merror[39m]: Can't find /api/users/get-all?setRole=property&search=hotel on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-04-06 11:57:13 [[31merror[39m]: Can't find /api/users/get-all?setRole=property&search=hotel on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-04-06 12:00:09 [[31merror[39m]: Can't find /api/users?page=1&limit=10 on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-04-06 12:00:34 [[31merror[39m]: Can't find /api/users?page=1&limit=10 on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-04-06 12:00:35 [[31merror[39m]: Can't find /api/users?page=1&limit=10 on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-04-06 12:00:53 [[31merror[39m]: Can't find /api/users?page=1&limit=10 on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-04-06 12:01:40 [[31merror[39m]: Can't find /api/users/get-all?setRole=property&search=hotel on this server {"statusCode":404,"status":"fail","isOperational":true}

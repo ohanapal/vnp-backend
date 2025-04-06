@@ -36,9 +36,9 @@ router
   .put(authMiddleware('admin'), updateUser)
   .delete(authMiddleware('admin'), deleteUser);
 
-router.get('/users', authMiddleware('admin', 'portfolio', 'sub-portfolio', 'property'), getAllUsers);
+router.get('', authMiddleware('admin', 'portfolio', 'sub-portfolio', 'property'), getAllUsers);
 router.get(
-  '/all-portfolios-sub-portfolios-properties',
+  '/get-all',
   authMiddleware('admin', 'portfolio', 'sub-portfolio', 'property'),
   getAllPortfoliosSubPortfoliosProperties,
 );
