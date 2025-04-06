@@ -31,11 +31,9 @@ router.route('/forgot-password-otp').post(sendForgetPasswordOTP);
 
 // User management routes
 router.put('/own-profile', authMiddleware('admin', 'portfolio', 'sub-portfolio', 'property'), updateOwnProfile);
-router
-  .route('/:id')
-  .put(authMiddleware('admin'), updateUser)
-  .delete(authMiddleware('admin'), deleteUser);
 
+router.put('/update/:id', authMiddleware('admin'), updateUser);
+router.delete('/delete/:id', authMiddleware('admin'), deleteUser);
 router.get('', authMiddleware('admin', 'portfolio', 'sub-portfolio', 'property'), getAllUsers);
 router.get(
   '/get-all',

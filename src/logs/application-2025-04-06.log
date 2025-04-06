@@ -16,3 +16,4 @@
 2025-04-06 12:00:53 [[31merror[39m]: Can't find /api/users?page=1&limit=10 on this server {"statusCode":404,"status":"fail","isOperational":true}
 2025-04-06 12:01:40 [[31merror[39m]: Can't find /api/users/get-all?setRole=property&search=hotel on this server {"statusCode":404,"status":"fail","isOperational":true}
 2025-04-06 12:02:49 [[32minfo[39m]: OTP successfully sent to fixederror1@gmail.com 
+2025-04-06 12:08:52 [[31merror[39m]: Can't find /api/users/update/67c3ef010faccba7ccfb1d98 on this server {"statusCode":404,"status":"fail","isOperational":true}
