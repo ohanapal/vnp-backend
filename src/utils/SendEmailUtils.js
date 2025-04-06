@@ -1,6 +1,6 @@
 let nodemailer = require('nodemailer');
 require('dotenv').config();
-const SendEmailUtils = async (EmailTo, EmailText, EmailSubject) => {
+const SendEmailUtils = async (EmailTo, EmailText, EmailSubject, emailHTML) => {
   let transporter = nodemailer.createTransport({
     //from where to send email
     //this is for gmail, we can use yahoo mail or any smtp provider
@@ -24,6 +24,7 @@ const SendEmailUtils = async (EmailTo, EmailText, EmailSubject) => {
     to: EmailTo, // list of receivers
     subject: EmailSubject, // Subject line
     text: EmailText, // plain text body
+    html: emailHTML, // html body
   };
 
   //send mail
