@@ -13,144 +13,6 @@ const wss = new WebSocket.Server({ port: 8080 });
 wss.on('connection', (ws) => {
   console.log('Client connected');
 });
-// Endpoint to receive notifications from Google Apps Script
-//app.post('/notify-change',
-// exports.notifyChange = async (req, res) => {
-//   const client = await auth.getClient();
-//   const sheets = google.sheets({ version: 'v4', auth: client });
-
-//   try {
-//     const { rowNumber, sheetId } = req.body;
-
-//     if (!rowNumber || !sheetId) {
-//       return res.status(400).send('Missing required fields: rowNumber or sheetId');
-//     }
-
-//     // Fetch the header row (row 2 in your case)
-//     const headerResponse = await sheets.spreadsheets.values.get({
-//       spreadsheetId: sheetId,
-//       range: `Sheet1!A2:Z2`, // Change to row 2
-//     });
-
-//     const headers = headerResponse.data.values ? headerResponse.data.values[0] : []; // Fetch headers from row 2
-//     if (!headers || headers.length === 0) {
-//       return res.status(400).send('No headers found in the sheet');
-//     }
-
-//     // Fetch the specified row data
-//     const rowResponse = await sheets.spreadsheets.values.get({
-//       spreadsheetId: sheetId,
-//       range: `Sheet1!A${rowNumber}:Z${rowNumber}`,
-//     });
-
-//     const rowData = rowResponse.data.values ? rowResponse.data.values[0] : null;
-
-//     if (!rowData || rowData.every((cell) => !cell || cell.trim() === '')) {
-//       await SheetData.deleteOne({ unique_id: rowNumber });
-//       console.log(`Row ${rowNumber} deleted from MongoDB`);
-
-//       wss.clients.forEach((client) => {
-//         if (client.readyState === WebSocket.OPEN) {
-//           client.send(JSON.stringify({ message: 'Row deleted', rowNumber }));
-//         }
-//       });
-
-//       return res.status(200).send(`Row ${rowNumber} deleted from the database.`);
-//     }
-
-//     // Map headers to their corresponding row values
-//     const rowObject = headers.reduce((acc, header, index) => {
-//       acc[header.trim()] = rowData[index]?.trim() || null;
-//       return acc;
-//     }, {});
-
-//     console.log('Mapped row object:', rowObject);
-//     const parseDate = (dateString) => {
-//       // If the dateString is empty or invalid, return undefined
-//       if (!dateString || dateString === 'To' || !/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
-//         return undefined; // Return undefined for invalid date
-//       }
-
-//       const [month, day, year] = dateString.split('/');
-
-//       // Try creating a valid Date object from the parts
-//       const date = new Date(`${year}-${month}-${day}`);
-
-//       // If the date is invalid, return undefined
-//       if (isNaN(date)) {
-//         return undefined;
-//       }
-
-//       return date; // Return valid Date object
-//     };
-
-//     console.log('Row data:', rowObject);
-
-//     // Build the mapped data object using header keys
-//     const mappedData = {
-//       unique_id: rowObject['id'],
-//       posting_type: rowObject['Posting Type'],
-//       portfolio_name: rowObject['Portfolio Name'],
-//       sub_portfolio: rowObject['Sub Portfolio'],
-//       property_name: rowObject['Property Name'],
-//       // from: rowObject['From'] ? new Date(rowObject['From']) : undefined,
-//       // to: rowObject['To'] ? new Date(rowObject['To']) : undefined,
-//       from: parseDate(rowObject['From']),
-//       to: parseDate(rowObject['To']),
-//       expedia: {
-//         expedia_id: rowObject['Expedia ID'],
-//         review_status: rowObject['Expedia Review Status'],
-//         billing_type: rowObject['Billing Type'],
-//         remaining_or_direct_billed: rowObject['Remaining/Direct Billed'],
-//         amount_collectable: rowObject['EXPEDIA AMOUNT COLLECTABLE'],
-//         additional_revenue: rowObject['Additional Revenue'],
-//         amount_confirmed: rowObject['EXPEDIA AMOUNT CONFIRMED'],
-//       },
-//       booking: {
-//         booking_id: rowObject['Booking ID'],
-//         review_status: rowObject['Booking.Com Review Status'],
-//         amount_collectable: rowObject['BOOKING.COM AMOUNT COLLECTABLE'],
-//         amount_confirmed: rowObject['BOOKING.COM AMOUNT CONFIRMED'],
-//       },
-//       agoda: {
-//         agoda_id: rowObject['Agoda ID'],
-//         review_status: rowObject['AGODA Review Status'],
-//         amount_collectable: rowObject['AGODA AMOUNT COLLECTABLE'],
-//         amount_confirmed: rowObject['AGODA AMOUNT CONFIRMED'],
-//       },
-//     };
-
-//     function escapeRegExp(string) {
-//       return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-//     }
-
-//     // Helper function to get or create a document
-//     const getOrCreate = async (model, name) => {
-//       if (!name) return null;
-//       const normalizedName = name.trim().toLowerCase();
-//       const escapedName = escapeRegExp(normalizedName); // Escape special characters
-//       const doc = await model.findOneAndUpdate(
-//         { name: new RegExp(`^${escapedName}$`, 'i') },
-//         { name: normalizedName },
-//         { upsert: true, new: true, setDefaultsOnInsert: true },
-//       );
-//       return doc._id;
-//     };
-
-//     mappedData.portfolio_name = await getOrCreate(PortfolioModel, mappedData.portfolio_name);
-//     mappedData.sub_portfolio = await getOrCreate(SubPortfolioModel, mappedData.sub_portfolio);
-//     mappedData.property_name = await getOrCreate(PropertyModel, mappedData.property_name);
-
-//     await SheetData.updateOne({ unique_id: mappedData.unique_id }, { $set: mappedData }, { upsert: true });
-
-//     console.log('Row data upserted successfully:', mappedData);
-
-//     res.status(200).send('Row data processed successfully');
-//   } catch (error) {
-//     console.error('Error processing notification:', error.message);
-//     res.status(500).send('Error processing notification');
-//   }
-// };
 
 exports.notifyChange = async (req, res) => {
   const client = await auth.getClient();
@@ -260,10 +122,10 @@ exports.notifyChange = async (req, res) => {
     };
 
     // Add the check here
-    if (!mappedData.unique_id) {
-      console.log(`Skipping row ${rowNumber} as unique_id is null or empty`);
-      return res.status(200).send(`Row ${rowNumber} skipped as unique_id is null or empty.`);
-    }
+    if (!/^\d+$/.test(mappedData.unique_id?.trim())) {
+      console.log(`Invalid ID in row ${rowNumber}: ${mappedData.unique_id}`);
+      return res.status(400).send(`Invalid ID in row ${rowNumber}: ${mappedData.unique_id}`);
+    }    
 
     function escapeRegExp(string) {
       return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -457,8 +319,8 @@ exports.bulkUpload = async (req, res) => {
       dataRows.map(async (row, index) => {
         // console.log('row', row.serial);
         const uniqueId = getCellValue(row, 'id');
-        if (!uniqueId) {
-          console.log(`Skipping row ${index + 1}: Missing or invalid Serial Number`);
+        if (!/^\d+$/.test(uniqueId?.trim())) {
+          console.log(`Invalid ID in row ${index + 1}: ${uniqueId}`);
           return null;
         }
 
