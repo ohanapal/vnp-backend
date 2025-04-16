@@ -81,23 +81,23 @@ exports.notifyChange = async (req, res) => {
     const mappedData = {
       unique_id: rowObject['id'],
       posting_type: rowObject['Posting Type'],
-      portfolio_name: rowObject['Portfolio Name'],
+      portfolio_name: rowObject['Portfolio'],
       sub_portfolio: rowObject['Sub Portfolio'],
       property_name: rowObject['Property Name'],
       // from: rowObject['From'] ? new Date(rowObject['From']) : undefined,
       // to: rowObject['To'] ? new Date(rowObject['To']) : undefined,
       from: parseDate(rowObject['From']),
       to: parseDate(rowObject['To']),
-      next_audit_date: parseDate(rowObject['Next Due Date']),
+      next_audit_date: parseDate(rowObject['Next Review Date']),
       
       expedia: {
         expedia_id: rowObject['Expedia ID'],
         review_status: rowObject['Expedia Review Status'],
         billing_type: rowObject['Billing Type'],
         remaining_or_direct_billed: rowObject['Remaining/Direct Billed'],
-        amount_collectable: rowObject['EXPEDIA AMOUNT COLLECTABLE'],
+        amount_collectable: rowObject['Expedia Amount Reported to Property'],
         additional_revenue: rowObject['Additional Revenue'],
-        amount_confirmed: rowObject['EXPEDIA AMOUNT CONFIRMED'],
+        amount_confirmed: rowObject['Expedia Amount Confirmed by Property'],
         username: rowObject['User Name'],
         user_email: rowObject['Email User Name'],
         user_password: rowObject['Password'],
@@ -105,8 +105,8 @@ exports.notifyChange = async (req, res) => {
       booking: {
         booking_id: rowObject['Booking ID'],
         review_status: rowObject['Booking.Com Review Status'],
-        amount_collectable: rowObject['BOOKING.COM AMOUNT COLLECTABLE'],
-        amount_confirmed: rowObject['BOOKING.COM AMOUNT CONFIRMED'],
+        amount_collectable: rowObject['Booking.com Amount to be Claimed'],
+        amount_confirmed: rowObject['Booking.com Amount Confirmed by Property'],
         username: rowObject['User Name'],
         user_password: rowObject['Password'],
 
@@ -114,8 +114,8 @@ exports.notifyChange = async (req, res) => {
       agoda: {
         agoda_id: rowObject['Agoda ID'],
         review_status: rowObject['AGODA Review Status'],
-        amount_collectable: rowObject['AGODA AMOUNT COLLECTABLE'],
-        amount_confirmed: rowObject['AGODA AMOUNT CONFIRMED'],
+        amount_collectable: rowObject['Amount to be Claimed From Agoda'],
+        amount_confirmed: rowObject['Amount Confirmed by Property'],
         username: rowObject['User Name'],
         user_password: rowObject['Password'],
       },
@@ -251,9 +251,10 @@ const formatDate = (dateString) => {
 
 //app.post('/bulk-upload',
 exports.bulkUpload = async (req, res) => {
-  console.log('Bulk upload initiated:', req.body);
+  // console.log('Bulk upload initiated:', req.body);
 
   const client = await auth.getClient();
+  // console.log("client", client)
   const sheets = google.sheets({ version: 'v4', auth: client });
 
   try {
@@ -262,11 +263,13 @@ exports.bulkUpload = async (req, res) => {
       return res.status(400).send('Missing required field: sheetId');
     }
 
+    
     // Fetch the entire sheet data, including headers
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: 'Sheet1!A1:Z', // Include header row
+      range: "'Master Trace-VNP'!B1:Z", 
     });
+
 
     const rows = response.data.values;
     if (!rows || rows.length < 2) {
@@ -324,7 +327,7 @@ exports.bulkUpload = async (req, res) => {
           return null;
         }
 
-        const portfolioId = await getOrCreate(PortfolioModel, getCellValue(row, 'Portfolio Name'));
+        const portfolioId = await getOrCreate(PortfolioModel, getCellValue(row, 'Portfolio'));
         const subPortfolioId = await getOrCreate(SubPortfolioModel, getCellValue(row, 'Sub Portfolio'));
         const propertyId = await getOrCreate(PropertyModel, getCellValue(row, 'Property Name'));
 
@@ -340,16 +343,16 @@ exports.bulkUpload = async (req, res) => {
                 property_name: propertyId,
                 from: getCellValue(row, 'From'),
                 to: getCellValue(row, 'To'),
-                next_audit_date: getCellValue(row, 'Next Due Date'),
+                next_audit_date: getCellValue(row, 'Next Review Date'),
 
                 expedia: {
                   expedia_id: getCellValue(row, 'Expedia ID'),
                   review_status: getCellValue(row, 'Expedia Review Status'),
                   billing_type: getCellValue(row, 'Billing Type'),
                   remaining_or_direct_billed: getCellValue(row, 'Remaining/Direct Billed'),
-                  amount_collectable: getCellValue(row, 'EXPEDIA AMOUNT COLLECTABLE'),
+                  amount_collectable: getCellValue(row, 'Expedia Amount Reported to Property'),
                   additional_revenue: parseFloat(getCellValue(row, 'Additional Revenue')) || 0,
-                  amount_confirmed: getCellValue(row, 'EXPEDIA AMOUNT CONFIRMED'),
+                  amount_confirmed: getCellValue(row, 'Expedia Amount Confirmed by Property'),
                   username: getCellValue(row, 'User Name'),
                   user_email: getCellValue(row, 'Email User Name'),
                   user_password: getCellValue(row, 'Password'),
@@ -358,8 +361,8 @@ exports.bulkUpload = async (req, res) => {
                 booking: {
                   booking_id: getCellValue(row, 'Booking ID'),
                   review_status: getCellValue(row, 'Booking.Com Review Status'),
-                  amount_collectable: getCellValue(row, 'BOOKING.COM AMOUNT COLLECTABLE'),
-                  amount_confirmed: getCellValue(row, 'BOOKING.COM AMOUNT CONFIRMED'),
+                  amount_collectable: getCellValue(row, 'Booking.com Amount to be Claimed'),
+                  amount_confirmed: getCellValue(row, 'Booking.com Amount Confirmed by Property'),
                   username: getCellValue(row, 'User Name'),
                   user_password: getCellValue(row, 'Password'),
                 },
@@ -367,8 +370,8 @@ exports.bulkUpload = async (req, res) => {
                 agoda: {
                   agoda_id: getCellValue(row, 'Agoda ID'),
                   review_status: getCellValue(row, 'AGODA Review Status'),
-                  amount_collectable: getCellValue(row, 'AGODA AMOUNT COLLECTABLE'),
-                  amount_confirmed: getCellValue(row, 'AGODA AMOUNT CONFIRMED'),
+                  amount_collectable: getCellValue(row, 'Amount to be Claimed From Agoda'),
+                  amount_confirmed: getCellValue(row, 'Amount Confirmed by Property'),
                   username: getCellValue(row, 'User Name'),
                   user_password: getCellValue(row, 'Password'),
 
@@ -516,7 +519,7 @@ exports.updateDatabase = async (req, res) => {
     // Fetch the entire sheet data, including headers
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: 'Sheet1!A1:Z', // Include header row
+      range: 'Sheet3!A1:Z', // Include header row
     });
 
     const rows = response.data.values;
@@ -617,7 +620,7 @@ exports.showsomefield = async (req, res) => {
     // Fetch the entire sheet data, including headers
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: 'Sheet1!A1:Z', // Include header row
+      range: 'Sheet3!A1:Z', // Include header row
     });
 
     const rows = response.data.values;
