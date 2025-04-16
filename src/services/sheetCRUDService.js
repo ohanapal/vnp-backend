@@ -167,7 +167,7 @@ async function updateCell(auth, spreadsheetId, sheetName, rowNumber, columnName,
 
 async function fetchGoogleSheetData(auth, spreadsheetId) {
   const sheets = google.sheets({ version: "v4", auth });
-  const RANGE = "'Master Trace-VNP'!A:Z";
+  const RANGE = "'Master Trace-VNP'!B:Z";
 
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,

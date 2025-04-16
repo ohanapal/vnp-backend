@@ -40,7 +40,7 @@ exports.notifyChange = async (req, res) => {
     // Fetch the specified row data
     const rowResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: `'Master Trace-VNP'!A${rowNumber}:Z${rowNumber}`,
+      range: `'Master Trace-VNP'!B${rowNumber}:Z${rowNumber}`,
     });
 
     const rowData = rowResponse.data.values ? rowResponse.data.values[0] : null;
