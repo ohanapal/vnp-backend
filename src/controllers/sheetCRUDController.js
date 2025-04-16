@@ -40,7 +40,7 @@ exports.notifyChange = async (req, res) => {
     // Fetch the specified row data
     const rowResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: `Sheet1!A${rowNumber}:Z${rowNumber}`,
+      range: `'Master Trace-VNP'!A${rowNumber}:Z${rowNumber}`,
     });
 
     const rowData = rowResponse.data.values ? rowResponse.data.values[0] : null;
@@ -455,7 +455,7 @@ exports.updateCell = async (req, res) => {
         error: 'Missing required fields or invalid format',
         example: {
           spreadsheetId: 'your-sheet-id',
-          sheetName: 'Sheet1',
+          sheetName: 'Master Trace-VNP',
           rowNumber: 2,
           columnName: ['Units Sold', 'Manufacturing Price'],
           newValue: ['$20000', '$2000000'],
