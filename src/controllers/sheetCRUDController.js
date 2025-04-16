@@ -28,7 +28,8 @@ exports.notifyChange = async (req, res) => {
     // Fetch the header row (row 2 in your case)
     const headerResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: `Sheet1!A2:Z2`, // Change to row 2
+      //range: `Sheet1!A2:Z2`, // Change to row 2
+      range: "'Master Trace-VNP'!B2:Z2"
     });
 
     const headers = headerResponse.data.values ? headerResponse.data.values[0] : []; // Fetch headers from row 2
