@@ -44,6 +44,7 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
 
         // Apply both filters
         query.$or = [{ portfolio_name: { $in: matchingPortfolioIds } }, { property_name: { $in: matchingPropertyIds } }];
+        console.log('query', query);
       }
       // Apply portfolio filter
       if (filters?.portfolio) {
@@ -93,40 +94,100 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
       } else if (role === 'property') {
         query.property_name = { $in: connectedEntityIds };
       }
-      // Apply search filter if provided (for non-admin roles)
+      
       // Apply search filter if provided (for non-admin roles)
       if (search) {
-        const matchingPortfolios = await portfolioModel.find({ name: { $regex: search, $options: 'i' } });
-        const matchingPortfolioIds = matchingPortfolios.map((portfolio) => portfolio._id);
-
-        const matchingProperties = await propertyModel.find({
-          name: { $regex: search, $options: 'i' },
-        });
-        const matchingPropertyIds = matchingProperties.map((property) => property._id);
-
+        // For each role, we'll add a search filter that only searches within their authorized data
         if (role === 'portfolio') {
-          // Only show portfolios that match both the search AND are in connectedEntityIds
-          query.portfolio_name = {
-            $in: matchingPortfolioIds.filter((id) =>
-              connectedEntityIds.some((connId) => connId.toString() === id.toString()),
-            ),
-          };
+          // For portfolio role, get the portfolios they're authorized to access
+          const authorizedPortfolios = await portfolioModel.find({
+            _id: { $in: connectedEntityIds },
+            name: { $regex: search, $options: 'i' }
+          });
+          const matchingPortfolioIds = authorizedPortfolios.map(portfolio => portfolio._id);
+          
+          // Get properties within these portfolios that match the search
+          const properties = await propertyModel.find({
+            name: { $regex: search, $options: 'i' }
+          });
+          const matchingPropertyIds = properties.map(property => property._id);
+          
+          // Update the query to search within their authorized data
+          if (matchingPortfolioIds.length > 0) {
+            query.portfolio_name = { $in: matchingPortfolioIds };
+          } else if (matchingPropertyIds.length > 0) {
+            // If no matching portfolios but some matching properties
+            query.$and = [
+              { portfolio_name: { $in: connectedEntityIds } },
+              { property_name: { $in: matchingPropertyIds } }
+            ];
+          } else {
+            // If no matches at all, return no results
+            query.portfolio_name = { $in: [] };
+          }
         } else if (role === 'sub-portfolio') {
-          // Keep the existing sub-portfolio restriction
-          // Add search constraints as an $or condition
-          query.$and = [
-            { sub_portfolio: { $in: connectedEntityIds } },
-            { $or: [{ portfolio_name: { $in: matchingPortfolioIds } }, { property_name: { $in: matchingPropertyIds } }] },
-          ];
+          // For sub-portfolio role, get sub-portfolios they have access to
+          const authorizedSubPortfolios = await portfolioModel.find({
+            _id: { $in: connectedEntityIds },
+            name: { $regex: search, $options: 'i' }
+          });
+          
+          // Also look for matching portfolios and properties
+          const matchingPortfolios = await portfolioModel.find({ 
+            name: { $regex: search, $options: 'i' } 
+          });
+          const matchingProperties = await propertyModel.find({ 
+            name: { $regex: search, $options: 'i' } 
+          });
+          
+          // Update query to search within authorized data
+          if (authorizedSubPortfolios.length > 0) {
+            // If there are matching sub-portfolios they have access to
+            query.sub_portfolio = { $in: authorizedSubPortfolios.map(sp => sp._id) };
+          } else if (matchingPortfolios.length > 0 || matchingProperties.length > 0) {
+            // If there are matching portfolios or properties
+            query.$and = [
+              { sub_portfolio: { $in: connectedEntityIds } },
+              { 
+                $or: [
+                  { portfolio_name: { $in: matchingPortfolios.map(p => p._id) } },
+                  { property_name: { $in: matchingProperties.map(p => p._id) } }
+                ] 
+              }
+            ];
+          } else {
+            // If no matches at all, return no results
+            query.sub_portfolio = { $in: [] };
+          }
         } else if (role === 'property') {
-          // Keep the existing property restriction
-          // Add search constraints as an $or condition
-          query.$and = [
-            { property_name: { $in: connectedEntityIds } },
-            { $or: [{ portfolio_name: { $in: matchingPortfolioIds } }, { property_name: { $in: matchingPropertyIds } }] },
-          ];
+          // For property role, get properties they have access to
+          const authorizedProperties = await propertyModel.find({
+            _id: { $in: connectedEntityIds },
+            name: { $regex: search, $options: 'i' }
+          });
+          
+          // Also look for matching portfolios
+          const matchingPortfolios = await portfolioModel.find({ 
+            name: { $regex: search, $options: 'i' } 
+          });
+          
+          // Update query to search within authorized data
+          if (authorizedProperties.length > 0) {
+            // If there are matching properties they have access to
+            query.property_name = { $in: authorizedProperties.map(p => p._id) };
+          } else if (matchingPortfolios.length > 0) {
+            // If there are matching portfolios
+            query.$and = [
+              { property_name: { $in: connectedEntityIds } },
+              { portfolio_name: { $in: matchingPortfolios.map(p => p._id) } }
+            ];
+          } else {
+            // If no matches at all, return no results
+            query.property_name = { $in: [] };
+          }
         }
       }
+      
       // Date range filter
       if (filters?.startDate && filters?.endDate) {
         if (role === 'portfolio') {
@@ -213,6 +274,7 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
       sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
     }
 
+    console.log('Final query:', JSON.stringify(query, null, 2));
     // Fetch data with pagination, filtering, and sorting
     const data = await sheetDataModel
       .find(query)
@@ -231,378 +293,6 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
     throw new Error(`Error fetching data: ${error.message}`);
   }
 };
-
-// const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filters, role, connectedEntityIds }) => {
-//   try {
-//     const skip = (page - 1) * limit; // Calculate the number of documents to skip for pagination
-//     logger.info('Building query for fetching sheet data', { page, limit, filters, role });
-//     // Build the query
-//     const query = {};
-//     // console.log('connectedEntityIds:', connectedEntityIds);
-
-//     // Admin role can view all data without restriction
-//     if (role === 'admin') {
-//       // Admin can search by portfolio name
-//       if (search) {
-//         const matchingPortfolios = await portfolioModel.find({ name: { $regex: search, $options: 'i' } });
-//         const matchingPortfolioIds = matchingPortfolios.map((portfolio) => portfolio._id);
-//         query.portfolio_name = { $in: matchingPortfolioIds };
-//       }
-
-//       // apply portfolio filter
-//       if (filters?.portfolio) {
-//         try {
-//           query.portfolio_name = new ObjectId(filters?.portfolio);
-//         } catch (error) {
-//           logger.error('Error parsing portfolio filter', { error: error.message });
-//           throw new AppError('Invalid portfolio filter', 400);
-//         }
-//       }
-//       // apply sub_portfolio filter
-//       if (filters?.sub_portfolio) {
-//         try {
-//           query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
-//         } catch (error) {
-//           logger.error('Error parsing sub_portfolio filter', { error: error.message });
-//           throw new AppError('Invalid sub-portfolio filter', 400);
-//         }
-//       }
-
-//       if (filters?.startDate && filters?.endDate) {
-//         query.from = {
-//           $gte: new Date(filters.startDate),
-//           $lt: new Date(filters.endDate),
-//         };
-//       }
-
-//       // apply portfolio filter
-//       if (filters?.property) {
-//         try {
-//           // console.log('filters.portfolio:', filters.portfolio);
-//           query.property_name = new ObjectId(filters?.property);
-//         } catch (error) {
-//           logger.error('Error parsing property filter', { error: error.message });
-//           throw new AppError('Invalid property filter', 400);
-//         }
-//       }
-
-//       // Admin can apply posting_type filter
-//       if (filters?.posting_type) {
-//         query.posting_type = filters.posting_type;
-//       }
-//       console.log('query', query);
-//     } else {
-//       // Non-admin roles should filter based on connectedEntityIds
-
-//       if (role === 'portfolio') {
-//         // Filter for portfolio data based on connectedEntityIds
-//         query.portfolio_name = { $in: connectedEntityIds };
-//       } else if (role === 'sub-portfolio') {
-//         // Filter for sub-portfolio data based on connectedEntityIds
-//         query.sub_portfolio = { $in: connectedEntityIds };
-//       } else if (role === 'property') {
-//         // Filter for property data based on connectedEntityIds
-//         query.property_name = { $in: connectedEntityIds };
-//       }
-
-//       // Apply search filter if provided (for non-admin roles)
-//       if (search) {
-//         // Find matching portfolios based on the search term
-//         const matchingPortfolios = await portfolioModel.find({ name: { $regex: search, $options: 'i' } });
-//         const matchingPortfolioIds = matchingPortfolios.map((portfolio) => portfolio._id);
-
-//         // Ensure search results are scoped by role and connectedEntityIds
-//         if (role === 'portfolio') {
-//           // Only return portfolios in the search and user's connectedEntityIds
-//           query.portfolio_name = { $in: matchingPortfolioIds.filter((id) => connectedEntityIds.includes(id)) };
-//         } else if (role === 'sub-portfolio') {
-//           // Only return sub-portfolios connected to the user
-//           query.sub_portfolio = { $in: connectedEntityIds };
-
-//           // Filter sub-portfolios by portfolios from the search
-//           query.portfolio_name = { $in: matchingPortfolioIds };
-//         } else if (role === 'property') {
-//           // Ensure properties belong to the user's connectedEntityIds
-//           query.property_name = { $in: connectedEntityIds };
-
-//           // Additionally, filter by portfolios from the search
-//           query.portfolio_name = { $in: matchingPortfolioIds };
-//         }
-//       }
-
-//       if (filters?.startDate && filters?.endDate) {
-//         if (role === 'portfolio') {
-//           query.from = {
-//             $gte: new Date(filters.startDate),
-//             $lt: new Date(filters.endDate),
-//           }; // Only return portfolios in the search and user's connectedEntityIds
-//           query.portfolio_name = { $in: connectedEntityIds };
-//         } else if (role === 'sub-portfolio') {
-//           query.from = {
-//             $gte: new Date(filters.startDate),
-//             $lt: new Date(filters.endDate),
-//           };
-//           // Only return sub-portfolios connected to the user
-//           query.sub_portfolio = { $in: connectedEntityIds };
-//         } else if (role === 'property') {
-//           // Ensure properties belong to the user's connectedEntityIds
-//           query.property_name = { $in: connectedEntityIds };
-
-//           // Additionally, filter by portfolios from the search
-//           query.from = {
-//             $gte: new Date(filters.startDate),
-//             $lt: new Date(filters.endDate),
-//           };
-//         }
-//       }
-
-//       // Apply other filters (sub_portfolio, posting_type)
-//       if (filters?.portfolio) {
-//         try {
-//           if (role === 'portfolio') {
-//             query.portfolio_name = new ObjectId(filters?.portfolio);
-//             // Only return portfolios in the search and user's connectedEntityIds
-//             query.portfolio_name = { $in: connectedEntityIds };
-//           } else if (role === 'sub-portfolio') {
-//             query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
-
-//             // Only return sub-portfolios connected to the user
-//             query.portfolio_name = { $in: connectedEntityIds };
-//           } else if (role === 'property') {
-//             // Ensure properties belong to the user's connectedEntityIds
-//             query.property_name = { $in: connectedEntityIds };
-
-//             // Additionally, filter by portfolios from the search
-//             query.portfolio_name = new ObjectId(filters?.sub_portfolio);
-//           }
-//         } catch (error) {
-//           console.error('Error fetching portfolio:', error);
-//           throw new AppError(error.message);
-//         }
-//       }
-
-//       if (filters?.sub_portfolio) {
-//         try {
-//           if (role === 'portfolio') {
-//             query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
-//             // Only return portfolios in the search and user's connectedEntityIds
-//             query.portfolio_name = { $in: connectedEntityIds };
-//           } else if (role === 'sub-portfolio') {
-//             query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
-
-//             // Only return sub-portfolios connected to the user
-//             query.sub_portfolio = { $in: connectedEntityIds };
-//           } else if (role === 'property') {
-//             // Ensure properties belong to the user's connectedEntityIds
-//             query.property_name = { $in: connectedEntityIds };
-
-//             // Additionally, filter by portfolios from the search
-//             query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
-//           }
-//         } catch (error) {
-//           console.error('Error fetching portfolio:', error);
-//           throw new AppError(error.message);
-//         }
-//       }
-
-//       // apply portfolio filter
-//       if (filters?.property) {
-//         try {
-//           // console.log('filters.portfolio:', filters.portfolio);
-//           query.portfolio_name = new ObjectId(filters?.portfolio);
-//           if (role === 'portfolio') {
-//             query.property_name = new ObjectId(filters?.property);
-//             // Only return portfolios in the search and user's connectedEntityIds
-//             query.portfolio_name = { $in: connectedEntityIds };
-//           } else if (role === 'sub-portfolio') {
-//             query.property_name = new ObjectId(filters?.property);
-//             // Only return sub-portfolios connected to the user
-//             query.sub_portfolio = { $in: connectedEntityIds };
-//           } else if (role === 'property') {
-//             // Ensure properties belong to the user's connectedEntityIds
-//             query.property_name = { $in: connectedEntityIds };
-
-//             // Additionally, filter by portfolios from the search
-//             query.property_name = new ObjectId(filters?.property);
-//           }
-//         } catch (error) {
-//           console.error('Error fetching property:', error.message);
-//           throw new AppError(error); // Ensure proper error handling
-//         }
-//       }
-
-//       if (filters?.posting_type) {
-//         query.posting_type = filters.posting_type;
-//       }
-//     }
-
-//     // Sorting
-//     const sortOptions = {};
-//     if (sortBy && sortOrder) {
-//       sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
-//     }
-
-//     // console.log('query', query);
-
-//     // Fetch data with pagination, search, filtering, and sorting
-//     const data = await sheetDataModel
-//       .find(query)
-//       .populate('portfolio_name', 'name')
-//       .populate('sub_portfolio', 'name')
-//       .populate('property_name', 'name')
-//       .sort(sortOptions)
-//       .skip(skip)
-//       .limit(limit);
-
-//     // Count total documents for the query
-//     const total = await sheetDataModel.countDocuments(query);
-//     logger.info('Query executed successfully', { total });
-//     return { data, total };
-//   } catch (error) {
-//     throw new Error(`Error fetching data: ${error.message}`);
-//   }
-// };
-
-//with download option
-// const getAuditSheetData = async ({
-//   page,
-//   limit,
-//   search,
-//   sortBy,
-//   sortOrder,
-//   filters,
-//   role,
-//   connectedEntityIds,
-//   isDownload = false,
-// }) => {
-//   try {
-//     const skip = (page - 1) * limit; // Calculate the number of documents to skip for pagination
-
-//     // Build the query
-//     const query = {};
-//     // Admin role can view all data without restriction
-//     if (role === 'admin') {
-//       // Admin can search by portfolio name
-//       if (search) {
-//         const matchingPortfolios = await portfolioModel.find({ name: { $regex: search, $options: 'i' } });
-//         const matchingPortfolioIds = matchingPortfolios.map((portfolio) => portfolio._id);
-//         query.portfolio_name = { $in: matchingPortfolioIds };
-//       }
-
-//       // apply sub_portfolio filter
-//       if (filters?.sub_portfolio) {
-//         try {
-//           query.sub_portfolio = new ObjectId(filters?.sub_portfolio);
-//         } catch (error) {
-//           console.error('Error fetching portfolio:', error);
-//           throw new AppError(error.message);
-//         }
-//       }
-
-//       if (filters?.startDate && filters?.endDate) {
-//         query.from = {
-//           $gte: new Date(filters.startDate),
-//           $lt: new Date(filters.endDate),
-//         };
-//       }
-
-//       // apply portfolio filter
-//       if (filters?.property) {
-//         try {
-//           query.property_name = new ObjectId(filters?.property);
-//         } catch (error) {
-//           console.error('Error fetching portfolio:', error.message);
-//           throw new AppError(error); // Ensure proper error handling
-//         }
-//       }
-
-//       // Admin can apply posting_type filter
-//       if (filters?.posting_type) {
-//         query.posting_type = filters.posting_type;
-//       }
-//     } else {
-//       // Non-admin roles should filter based on connectedEntityIds
-
-//       if (role === 'portfolio') {
-//         query.portfolio_name = { $in: connectedEntityIds };
-//       } else if (role === 'sub-portfolio') {
-//         query.sub_portfolio = { $in: connectedEntityIds };
-//       } else if (role === 'property') {
-//         query.property_name = { $in: connectedEntityIds };
-//       }
-
-//       // Apply search filter if provided (for non-admin roles)
-//       if (search) {
-//         const matchingPortfolios = await portfolioModel.find({ name: { $regex: search, $options: 'i' } });
-//         const matchingPortfolioIds = matchingPortfolios.map((portfolio) => portfolio._id);
-
-//         if (role === 'portfolio') {
-//           query.portfolio_name = { $in: matchingPortfolioIds.filter((id) => connectedEntityIds.includes(id)) };
-//         } else if (role === 'sub-portfolio') {
-//           query.sub_portfolio = { $in: connectedEntityIds };
-//           query.portfolio_name = { $in: matchingPortfolioIds };
-//         } else if (role === 'property') {
-//           query.property_name = { $in: connectedEntityIds };
-//           query.portfolio_name = { $in: matchingPortfolioIds };
-//         }
-//       }
-//     }
-
-//     // Sorting
-//     const sortOptions = {};
-//     if (sortBy && sortOrder) {
-//       sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
-//     }
-
-//     // Fetch data with pagination, search, filtering, and sorting
-//     const data = await sheetDataModel
-//       .find(query)
-//       .populate('portfolio_name', 'name')
-//       .populate('sub_portfolio', 'name')
-//       .populate('property_name', 'name')
-//       .sort(sortOptions)
-//       .skip(skip)
-//       .limit(limit);
-
-//     // Count total documents for the query
-//     const total = await sheetDataModel.countDocuments(query);
-
-//     if (isDownload) {
-//       // If it's a download request, generate the Excel file and return it
-//       const excelJS = require('exceljs');
-//       const workbook = new excelJS.Workbook();
-//       const worksheet = workbook.addWorksheet('Audit Sheet');
-
-//       worksheet.columns = [
-//         { header: 'Portfolio Name', key: 'portfolio_name', width: 30 },
-//         { header: 'Sub Portfolio', key: 'sub_portfolio', width: 30 },
-//         { header: 'Property Name', key: 'property_name', width: 30 },
-//         { header: 'Posting Type', key: 'posting_type', width: 20 },
-//         { header: 'From', key: 'from', width: 20 },
-//         { header: 'To', key: 'to', width: 20 },
-//         // Add more columns as needed
-//       ];
-
-//       data.forEach((item) => {
-//         worksheet.addRow({
-//           portfolio_name: item.portfolio_name?.name,
-//           sub_portfolio: item.sub_portfolio?.name,
-//           property_name: item.property_name?.name,
-//           posting_type: item.posting_type,
-//           from: item.from,
-//           to: item.to,
-//           // Add more fields as necessary
-//         });
-//       });
-
-//       return workbook.xlsx.writeBuffer(); // Return the Excel file as a buffer
-//     }
-
-//     return { data, total };
-//   } catch (error) {
-//     throw new Error(`Error fetching data: ${error.message}`);
-//   }
-// };
 
 const updateAuditDataService = async (id, data, role, connectedEntityIds) => {
   logger.info(`Finding sheet data with ID: ${id}`);

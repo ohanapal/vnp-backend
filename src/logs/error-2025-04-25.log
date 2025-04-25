@@ -1,0 +1,3 @@
+2025-04-25 20:12:45 [[31merror[39m]: Unauthorized {"statusCode":401,"status":"fail","isOperational":true}
+2025-04-25 20:32:48 [[31merror[39m]: Can't find /first-login?email=cse_2012020156@lus.ac.bd on this server {"statusCode":404,"status":"fail","isOperational":true}
+2025-04-25 21:48:12 [[31merror[39m]: Can't find /first-login?email=fixederror1@gmail.com on this server {"statusCode":404,"status":"fail","isOperational":true}
