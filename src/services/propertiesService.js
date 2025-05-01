@@ -8,74 +8,73 @@ const userModel = require('../models/userModel');
 
 const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, filters, role, connectedEntityIds }) => {
   try {
-    const skip = (page - 1) * limit; // Calculate the number of documents to skip for pagination
-    const query = {}; // Build the query for filtering data
+    const skip = (page - 1) * limit;
+    const query = {};
 
-    // NEW: Apply ID filter that checks against booking_id, expedia_id, and agoda_id
-    if (filters?.id) {
-      const idQuery = {
-        $or: [
-          { 'booking.booking_id': filters.id },
-          { 'expedia.expedia_id': filters.id },
-          { 'agoda.agoda_id': filters.id }
-        ]
-      };
+    // Handle search parameter
+    if (search) {
+      // Check if the search term looks like an ID (you can adjust this condition based on your ID format)
+      const isIdSearch = /^[A-Za-z0-9-_]+$/.test(search);
 
-      if (role === 'admin') {
-        // For admin, just use the ID query
-        Object.assign(query, idQuery);
-      } else {
-        // For non-admin, combine with role-based restrictions
-        if (role === 'portfolio') {
-          query.$and = [
-            idQuery,
-            { portfolio_name: { $in: connectedEntityIds } }
-          ];
-        } else if (role === 'sub-portfolio') {
-          query.$and = [
-            idQuery,
-            { sub_portfolio: { $in: connectedEntityIds } }
-          ];
-        } else if (role === 'property') {
-          query.$and = [
-            idQuery,
-            { property_name: { $in: connectedEntityIds } }
-          ];
+      if (isIdSearch) {
+        // ID search - check against booking_id, expedia_id, and agoda_id
+        const idSearchConditions = [
+          { 'booking.booking_id': search },
+          { 'expedia.expedia_id': search },
+          { 'agoda.agoda_id': search }
+        ];
+
+        if (role === 'admin') {
+          query.$or = idSearchConditions;
+        } else {
+          // For non-admin, combine ID search with role-based restrictions
+          if (role === 'portfolio') {
+            query.$and = [
+              { $or: idSearchConditions },
+              { portfolio_name: { $in: connectedEntityIds } }
+            ];
+          } else if (role === 'sub-portfolio') {
+            query.$and = [
+              { $or: idSearchConditions },
+              { sub_portfolio: { $in: connectedEntityIds } }
+            ];
+          } else if (role === 'property') {
+            query.$and = [
+              { $or: idSearchConditions },
+              { property_name: { $in: connectedEntityIds } }
+            ];
+          }
         }
-      }
-    }
-
-    if (role === 'admin') {
-      // Admin can search by property name
-      if (search) {
+      } else {
+        // Property name search
         const matchingProperties = await propertyModel.find({ name: { $regex: search, $options: 'i' } });
         const matchingPropertyIds = matchingProperties.map((property) => property._id);
-        query.property_name = { $in: matchingPropertyIds };
-      }
 
-      // Apply filters
-      if (filters?.sub_portfolio) {
-        query.sub_portfolio = new ObjectId(filters.sub_portfolio);
-      }
-      if (filters?.portfolio) {
-        query.portfolio_name = new ObjectId(filters.portfolio);
-      }
-      if (filters?.posting_type) {
-        query.posting_type = filters.posting_type;
-      }
-      if (filters?.startDate && filters?.endDate) {
-        const start = new Date(filters.startDate);
-        const end = new Date(filters.endDate);
-        end.setHours(23, 59, 59, 999); // Include the full day for endDate
-
-        query.$and = [
-          { from: { $lte: end } }, // Database range starts before the query range ends
-          { to: { $gte: start } }, // Database range ends after the query range starts
-        ];
+        if (role === 'admin') {
+          query.property_name = { $in: matchingPropertyIds };
+        } else {
+          // For non-admin, combine property search with role-based restrictions
+          if (role === 'portfolio') {
+            query.$and = [
+              { property_name: { $in: matchingPropertyIds } },
+              { portfolio_name: { $in: connectedEntityIds } }
+            ];
+          } else if (role === 'sub-portfolio') {
+            query.$and = [
+              { property_name: { $in: matchingPropertyIds } },
+              { sub_portfolio: { $in: connectedEntityIds } }
+            ];
+          } else if (role === 'property') {
+            query.$and = [
+              { property_name: { $in: matchingPropertyIds } },
+              { property_name: { $in: connectedEntityIds } }
+            ];
+          }
+        }
       }
     } else {
-      // Non-admin roles filter data based on connectedEntityIds
-      if (!filters?.id) { // Only apply role-based filter if not already applied in ID filter
+      // If no search, apply role-based restrictions
+      if (role !== 'admin') {
         if (role === 'portfolio') {
           query.portfolio_name = { $in: connectedEntityIds };
         } else if (role === 'sub-portfolio') {
@@ -84,21 +83,9 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
           query.property_name = { $in: connectedEntityIds };
         }
       }
+    }
 
-      // Apply search
-      if (search) {
-        const matchingProperties = await propertyModel.find({ name: { $regex: search, $options: 'i' } });
-        const matchingPropertyIds = matchingProperties.map((property) => property._id);
-
-        if (role === 'property') {
-          query.property_name = {
-            $in: matchingPropertyIds.filter((id) => connectedEntityIds.includes(id.toString())),
-          };
-        } else {
-          query.property_name = { $in: matchingPropertyIds };
-        }
-      }
-
+    if (role === 'admin') {
       // Apply filters
       if (filters?.sub_portfolio) {
         query.sub_portfolio = new ObjectId(filters.sub_portfolio);
@@ -112,11 +99,32 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
       if (filters?.startDate && filters?.endDate) {
         const start = new Date(filters.startDate);
         const end = new Date(filters.endDate);
-        end.setHours(23, 59, 59, 999); // Include the full day for endDate
+        end.setHours(23, 59, 59, 999);
 
         query.$and = [
-          { from: { $lte: end } }, // Database range starts before the query range ends
-          { to: { $gte: start } }, // Database range ends after the query range starts
+          { from: { $lte: end } },
+          { to: { $gte: start } },
+        ];
+      }
+    } else {
+      // Apply filters for non-admin
+      if (filters?.sub_portfolio) {
+        query.sub_portfolio = new ObjectId(filters.sub_portfolio);
+      }
+      if (filters?.portfolio) {
+        query.portfolio_name = new ObjectId(filters.portfolio);
+      }
+      if (filters?.posting_type) {
+        query.posting_type = filters.posting_type;
+      }
+      if (filters?.startDate && filters?.endDate) {
+        const start = new Date(filters.startDate);
+        const end = new Date(filters.endDate);
+        end.setHours(23, 59, 59, 999);
+
+        query.$and = [
+          { from: { $lte: end } },
+          { to: { $gte: start } },
         ];
       }
     }
