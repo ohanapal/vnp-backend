@@ -22,6 +22,7 @@ const sheetDataController = async (req, res) => {
       portfolio,
       sub_portfolio,
       posting_type,
+      id,
     } = req.query;
     // console.log('query', req.query);
     // console.log('req, query', req.query);
@@ -32,7 +33,7 @@ const sheetDataController = async (req, res) => {
     if (sub_portfolio) filters.sub_portfolio = sub_portfolio;
     if (posting_type) filters.posting_type = posting_type;
     if (portfolio) filters.portfolio = portfolio;
-
+    if (id) filters.id = id;
     const result = await getPropertySheetData({
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),

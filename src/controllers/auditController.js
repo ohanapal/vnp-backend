@@ -78,6 +78,7 @@ const sheetDataController = async (req, res) => {
       startDate,
       endDate,
       nextAuditId, // New filter parameter from the frontend
+      id
     } = req.query;
 
     logger.info('Received request to fetch sheet data', { user: req.user, query: req.query });
@@ -91,7 +92,7 @@ const sheetDataController = async (req, res) => {
     if (startDate) filters.startDate = startDate;
     if (endDate) filters.endDate = endDate;
     if (nextAuditId) filters.nextAuditId = nextAuditId; // Add new filter
-
+    if (id) filters.id = id; // Add new filter
     const result = await getAuditSheetData({
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
@@ -102,6 +103,7 @@ const sheetDataController = async (req, res) => {
       role,
       connectedEntityIds,
     });
+    // console.log('filters', filters);
 
     logger.info('Sheet data fetched successfully', { totalItems: result.total });
     res.status(200).json({

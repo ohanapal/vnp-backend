@@ -33,6 +33,15 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
 
     // ADMIN role: No restrictions, with optional search and filters.
     if (role === 'admin') {
+      // NEW: Apply single ID filter that checks against booking_id, expedia_id, and agoda_id
+      if (filters?.id) {
+        query.$or = [
+          { 'booking.booking_id': filters.id },
+          { 'expedia.expedia_id': filters.id },
+          { 'agoda.agoda_id': filters.id }
+        ];
+      }
+
       // Search filter: Find matching portfolios by name.
       if (search) {
         const matchingPortfolios = await portfolioModel.find({ name: { $regex: search, $options: 'i' } });
@@ -93,6 +102,36 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
         query.sub_portfolio = { $in: connectedEntityIds };
       } else if (role === 'property') {
         query.property_name = { $in: connectedEntityIds };
+      }
+      
+      // NEW: For non-admin users, combine ID filter with role-based restrictions
+      if (filters?.id) {
+        // First get all records that match the ID
+        const idQuery = {
+          $or: [
+            { 'booking.booking_id': filters.id },
+            { 'expedia.expedia_id': filters.id },
+            { 'agoda.agoda_id': filters.id }
+          ]
+        };
+
+        // Then combine with role-based restrictions
+        if (role === 'portfolio') {
+          query.$and = [
+            idQuery,
+            { portfolio_name: { $in: connectedEntityIds } }
+          ];
+        } else if (role === 'sub-portfolio') {
+          query.$and = [
+            idQuery,
+            { sub_portfolio: { $in: connectedEntityIds } }
+          ];
+        } else if (role === 'property') {
+          query.$and = [
+            idQuery,
+            { property_name: { $in: connectedEntityIds } }
+          ];
+        }
       }
       
       // Apply search filter if provided (for non-admin roles)
@@ -274,7 +313,7 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
       sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
     }
 
-    console.log('Final query:', JSON.stringify(query, null, 2));
+    // console.log('Final query:', JSON.stringify(query, null, 2));
     // Fetch data with pagination, filtering, and sorting
     const data = await sheetDataModel
       .find(query)

@@ -34,10 +34,13 @@ const getRevenueMetrics = async (role, connectedEntityIds, startDate, endDate, p
 
   // Filter data based on role and connectedEntityIds or propertyName
   const filteredData = data.filter((item) => {
-    if (role === 'admin' && propertyName) {
-      return item.property_name?.name?.toLowerCase().includes(propertyName.toLowerCase());
+    // First apply propertyName filter if provided (for any role)
+    if (propertyName && item.property_name?.name) {
+      const propertyNameMatch = item.property_name.name.toLowerCase().includes(propertyName.toLowerCase());
+      if (!propertyNameMatch) return false;
     }
-
+    
+    // Then apply role-based filtering
     switch (role) {
       case 'portfolio':
         return connectedEntityIds.includes(item.portfolio_name?._id?.toString());
@@ -45,7 +48,9 @@ const getRevenueMetrics = async (role, connectedEntityIds, startDate, endDate, p
         return connectedEntityIds.includes(item.sub_portfolio_name?._id?.toString());
       case 'property':
         return connectedEntityIds.includes(item.property_name?._id?.toString());
-      default: // Admin or other roles with no propertyName filter
+      case 'admin':
+        return true; // Admin can see all data (propertyName filter is already applied above)
+      default:
         return true;
     }
   });

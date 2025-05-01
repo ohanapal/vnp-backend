@@ -11,7 +11,40 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
     const skip = (page - 1) * limit; // Calculate the number of documents to skip for pagination
     const query = {}; // Build the query for filtering data
 
-    // console.log("filters: " + filters.posting_type);
+    // NEW: Apply ID filter that checks against booking_id, expedia_id, and agoda_id
+    if (filters?.id) {
+      const idQuery = {
+        $or: [
+          { 'booking.booking_id': filters.id },
+          { 'expedia.expedia_id': filters.id },
+          { 'agoda.agoda_id': filters.id }
+        ]
+      };
+
+      if (role === 'admin') {
+        // For admin, just use the ID query
+        Object.assign(query, idQuery);
+      } else {
+        // For non-admin, combine with role-based restrictions
+        if (role === 'portfolio') {
+          query.$and = [
+            idQuery,
+            { portfolio_name: { $in: connectedEntityIds } }
+          ];
+        } else if (role === 'sub-portfolio') {
+          query.$and = [
+            idQuery,
+            { sub_portfolio: { $in: connectedEntityIds } }
+          ];
+        } else if (role === 'property') {
+          query.$and = [
+            idQuery,
+            { property_name: { $in: connectedEntityIds } }
+          ];
+        }
+      }
+    }
+
     if (role === 'admin') {
       // Admin can search by property name
       if (search) {
@@ -42,12 +75,14 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
       }
     } else {
       // Non-admin roles filter data based on connectedEntityIds
-      if (role === 'portfolio') {
-        query.portfolio_name = { $in: connectedEntityIds };
-      } else if (role === 'sub-portfolio') {
-        query.sub_portfolio = { $in: connectedEntityIds };
-      } else if (role === 'property') {
-        query.property_name = { $in: connectedEntityIds };
+      if (!filters?.id) { // Only apply role-based filter if not already applied in ID filter
+        if (role === 'portfolio') {
+          query.portfolio_name = { $in: connectedEntityIds };
+        } else if (role === 'sub-portfolio') {
+          query.sub_portfolio = { $in: connectedEntityIds };
+        } else if (role === 'property') {
+          query.property_name = { $in: connectedEntityIds };
+        }
       }
 
       // Apply search
