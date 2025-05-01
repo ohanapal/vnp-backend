@@ -407,7 +407,7 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
         total: formatToTwoDecimals(totalConfirmed),
       },
       totalAudits: totals.PortfolioCount,
-      totalPropety: {
+      totalProperty: {
         expedia: totals.expediaProperties,
         booking: totals.bookingProperties,
         agoda: totals.agodaProperties,
