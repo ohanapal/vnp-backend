@@ -324,8 +324,9 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       'agoda.amount_confirmed': 1,
       from: 1,
       to: 1,
-      next_audit_date: 1, // Include next_audit_date in results
-      _id: 1, // Include _id in results
+      next_audit_date: 1,
+      property_name: 1, // Include property_name in results
+      _id: 1,
     });
 
     // Initialize totals and next audit info tracking
@@ -337,8 +338,9 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       BookingConfirmedValue: 0,
       AgodaConfirmedValue: 0,
       PortfolioCount: documents.length,
-      NextAuditDateCount: 0, // Count of documents with future next_audit_date
-      NextAuditDateIds: [], // List of _id's for documents with future next_audit_date
+      NextAuditDateCount: 0,
+      NextAuditDateIds: [],
+      totalPropety: new Set(), // Track unique properties
     };
 
     const parseCurrency = (value) => {
@@ -367,6 +369,11 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       totals.BookingConfirmedValue += bookingConfirmed;
       totals.AgodaConfirmedValue += agodaConfirmed;
 
+      // Add property to the set if it exists
+      if (doc.property_name) {
+        totals.totalPropety.add(doc.property_name.toString());
+      }
+
       // If next_audit_date is in the future, update count and list of IDs
       if (doc.next_audit_date && new Date(doc.next_audit_date) > today) {
         totals.NextAuditDateCount += 1;
@@ -392,6 +399,7 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
         total: formatToTwoDecimals(totalConfirmed),
       },
       totalAudits: totals.PortfolioCount,
+      totalPropety: totals.totalPropety.size, // Add total properties count
     };
 
     // Add logic for next_audit_date based on role:
