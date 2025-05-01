@@ -340,7 +340,10 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       PortfolioCount: documents.length,
       NextAuditDateCount: 0,
       NextAuditDateIds: [],
-      totalPropety: new Set(), // Track unique properties
+      // Initialize property counts
+      expediaProperties: 0,
+      bookingProperties: 0,
+      agodaProperties: 0,
     };
 
     const parseCurrency = (value) => {
@@ -369,9 +372,11 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       totals.BookingConfirmedValue += bookingConfirmed;
       totals.AgodaConfirmedValue += agodaConfirmed;
 
-      // Add property to the set if it exists
+      // Count properties for each platform if they have values
       if (doc.property_name) {
-        totals.totalPropety.add(doc.property_name.toString());
+        if (expediaValue > 0) totals.expediaProperties++;
+        if (bookingValue > 0) totals.bookingProperties++;
+        if (agodaValue > 0) totals.agodaProperties++;
       }
 
       // If next_audit_date is in the future, update count and list of IDs
@@ -384,6 +389,9 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
     const totalReported = totals.ExpediaValue + totals.BookingValue + totals.AgodaValue;
     const totalConfirmed = totals.ExpediaConfirmedValue + totals.BookingConfirmedValue + totals.AgodaConfirmedValue;
     const formatToTwoDecimals = (value) => parseFloat(value.toFixed(2));
+
+    // Calculate total properties (sum of all platform counts)
+    const totalProperties = totals.expediaProperties + totals.bookingProperties + totals.agodaProperties;
 
     const result = {
       collectableAmounts: {
@@ -399,7 +407,12 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
         total: formatToTwoDecimals(totalConfirmed),
       },
       totalAudits: totals.PortfolioCount,
-      totalPropety: totals.totalPropety.size, // Add total properties count
+      totalPropety: {
+        expedia: totals.expediaProperties,
+        booking: totals.bookingProperties,
+        agoda: totals.agodaProperties,
+        total: totalProperties
+      }
     };
 
     // Add logic for next_audit_date based on role:
