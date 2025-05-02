@@ -273,7 +273,7 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
-      console.log('Adding date range', start, end);
+      // console.log('Adding date range', start, end);
 
       query = {
         $and: [
@@ -314,6 +314,33 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       // Otherwise, admin sees all data (no further filtering by connectedEntityIds)
     }
 
+    // First, get all properties for the user based on role
+    let propertyQuery = {};
+    if (role !== 'admin') {
+      if (role === 'portfolio') {
+        // For portfolio role, find all properties in sheetData that belong to this portfolio
+        const propertiesInPortfolio = await sheetDataModel.find({ portfolio_name: { $in: connectedEntityIds } }, 'property_name');
+        propertyQuery = { _id: { $in: propertiesInPortfolio.map(p => p.property_name) } };
+      } else if (role === 'sub-portfolio') {
+        const propertiesInSubPortfolio = await sheetDataModel.find({ sub_portfolio: { $in: connectedEntityIds } }, 'property_name');
+        propertyQuery = { _id: { $in: propertiesInSubPortfolio.map(p => p.property_name) } };
+      } else if (role === 'property') {
+        propertyQuery = { _id: { $in: connectedEntityIds } };
+      }
+    } else if (selectedPortfolio && selectedPortfolio !== 'all') {
+      const portfolio = await portfolioModel.findOne({ name: selectedPortfolio });
+      if (!portfolio) {
+        throw new AppError(`Portfolio with name "${selectedPortfolio}" not found.`, 404);
+      }
+      const propertiesInPortfolio = await sheetDataModel.find({ portfolio_name: portfolio._id }, 'property_name');
+      propertyQuery = { _id: { $in: propertiesInPortfolio.map(p => p.property_name) } };
+    }
+
+    // Get total properties count
+    const totalProperties = await PropertyModel.countDocuments(propertyQuery);
+    // console.log('Total properties query:', propertyQuery);
+    // console.log('Total properties count:', totalProperties);
+
     // Fetch matching documents from sheetDataModel
     const documents = await sheetDataModel.find(query, {
       'expedia.amount_collectable': 1,
@@ -322,10 +349,13 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       'expedia.amount_confirmed': 1,
       'booking.amount_confirmed': 1,
       'agoda.amount_confirmed': 1,
+      'expedia.review_status': 1,
+      'booking.review_status': 1,
+      'agoda.review_status': 1,
       from: 1,
       to: 1,
       next_audit_date: 1,
-      property_name: 1, // Include property_name in results
+      property_name: 1,
       _id: 1,
     });
 
@@ -340,10 +370,10 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       PortfolioCount: documents.length,
       NextAuditDateCount: 0,
       NextAuditDateIds: [],
-      // Initialize property counts
-      expediaProperties: 0,
-      bookingProperties: 0,
-      agodaProperties: 0,
+      // Initialize access required counts
+      expediaAccessRequired: 0,
+      bookingAccessRequired: 0,
+      agodaAccessRequired: 0,
     };
 
     const parseCurrency = (value) => {
@@ -372,12 +402,10 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       totals.BookingConfirmedValue += bookingConfirmed;
       totals.AgodaConfirmedValue += agodaConfirmed;
 
-      // Count properties for each platform if they have values
-      if (doc.property_name) {
-        if (expediaValue > 0) totals.expediaProperties++;
-        if (bookingValue > 0) totals.bookingProperties++;
-        if (agodaValue > 0) totals.agodaProperties++;
-      }
+      // Count properties that need access for each platform
+      if (doc?.expedia?.review_status === "Access Required") totals.expediaAccessRequired++;
+      if (doc?.booking?.review_status === "Access Required") totals.bookingAccessRequired++;
+      if (doc?.agoda?.review_status === "Access Required") totals.agodaAccessRequired++;
 
       // If next_audit_date is in the future, update count and list of IDs
       if (doc.next_audit_date && new Date(doc.next_audit_date) > today) {
@@ -389,9 +417,6 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
     const totalReported = totals.ExpediaValue + totals.BookingValue + totals.AgodaValue;
     const totalConfirmed = totals.ExpediaConfirmedValue + totals.BookingConfirmedValue + totals.AgodaConfirmedValue;
     const formatToTwoDecimals = (value) => parseFloat(value.toFixed(2));
-
-    // Calculate total properties (sum of all platform counts)
-    const totalProperties = totals.expediaProperties + totals.bookingProperties + totals.agodaProperties;
 
     const result = {
       collectableAmounts: {
@@ -408,10 +433,10 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       },
       totalAudits: totals.PortfolioCount,
       totalProperty: {
-        expedia: totals.expediaProperties,
-        booking: totals.bookingProperties,
-        agoda: totals.agodaProperties,
-        total: totalProperties
+        expedia: totals.expediaAccessRequired,
+        booking: totals.bookingAccessRequired,
+        agoda: totals.agodaAccessRequired,
+        total: totals.PortfolioCount
       }
     };
 
