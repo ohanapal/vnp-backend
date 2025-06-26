@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/vnp-backend/src/logs/.31b0258411b511e54485f038757fdc8045a2223e-audit.json",
+    "files": [
+        {
+            "date": 1750874852406,
+            "name": "/Users/s.m.ahadalichowdhury/Downloads/project/rbac/vnp-backend/src/logs/error-2025-06-26.log",
+            "hash": "f5b207d57ce921a2060662c1e7ea7d6690efe5195cb650399ee23cfb85e3db6e"
+        }
+    ],
+    "hashType": "sha256"
+}

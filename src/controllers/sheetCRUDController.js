@@ -14,33 +14,97 @@ wss.on('connection', (ws) => {
   console.log('Client connected');
 });
 
+// Helper function to create section mapping
+const createSectionMapping = (sectionHeaders, columnHeaders) => {
+  const mapping = {};
+  let currentSection = '';
+  
+  console.log('Creating section mapping...');
+  console.log('Section headers:', sectionHeaders);
+  console.log('Column headers:', columnHeaders);
+  
+  for (let i = 0; i < columnHeaders.length; i++) {
+    // Update current section if we encounter a section header
+    if (sectionHeaders[i] && sectionHeaders[i].trim() !== '') {
+      currentSection = sectionHeaders[i].trim().toLowerCase();
+      console.log(`  Position ${i}: New section "${currentSection}"`);
+    }
+    
+    const columnName = columnHeaders[i];
+    if (columnName && columnName.trim() !== '') {
+      mapping[columnName.trim()] = {
+        section: currentSection,
+        index: i
+      };
+      console.log(`  Position ${i}: Column "${columnName.trim()}" -> Section "${currentSection}"`);
+    }
+  }
+  
+  return mapping;
+};
+
+// Helper function to get value by section and column name with fallback options
+const getValueBySection = (rowData, sectionMapping, columnNames, targetSection) => {
+  // Convert single column name to array for consistency
+  const columnNamesToCheck = Array.isArray(columnNames) ? columnNames : [columnNames];
+  
+  console.log(`Looking for columns: ${JSON.stringify(columnNamesToCheck)} in section: "${targetSection}"`);
+  
+  // Try each column name until we find a match
+  for (const columnName of columnNamesToCheck) {
+    // Find all columns with this name in the target section
+    const matchingColumns = Object.entries(sectionMapping).filter(([col, info]) => {
+      const colMatch = col.toLowerCase().trim() === columnName.toLowerCase().trim();
+      const sectionMatch = info.section.toLowerCase() === targetSection.toLowerCase();
+      
+      return colMatch && sectionMatch;
+    });
+    
+    if (matchingColumns.length > 0) {
+      const [foundColumnName, columnInfo] = matchingColumns[0];
+      const value = rowData[columnInfo.index] || null;
+      console.log(`  Found "${columnName}" in section "${targetSection}" at index ${columnInfo.index}: "${value}"`);
+      return value;
+    }
+  }
+  
+  console.log(`  No matching column found for any of ${JSON.stringify(columnNamesToCheck)} in section "${targetSection}"`);
+  return null;
+};
+
 exports.notifyChange = async (req, res) => {
   const client = await auth.getClient();
   const sheets = google.sheets({ version: 'v4', auth: client });
 
   try {
     const { rowNumber, sheetId } = req.body;
+    console.log('Received message:', req.body);
 
     if (!rowNumber || !sheetId) {
       return res.status(400).send('Missing required fields: rowNumber or sheetId');
     }
 
-    // Fetch the header row (row 2 in your case)
+    // Fetch both header rows to understand the section structure
     const headerResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      //range: `Sheet1!A2:Z2`, // Change to row 2
-      range: "'Master Trace-VNP'!B2:Z2"
+      range: "'Master Trace-VNP'!B1:AZ2" // Fetch both row 1 (sections) and row 2 (column names)
     });
 
-    const headers = headerResponse.data.values ? headerResponse.data.values[0] : []; // Fetch headers from row 2
-    if (!headers || headers.length === 0) {
+    const headerRows = headerResponse.data.values;
+    if (!headerRows || headerRows.length < 2) {
       return res.status(400).send('No headers found in the sheet');
     }
+
+    const sectionHeaders = headerRows[0]; // Row 1: EXPEDIA, BOOKING, AGODA
+    const columnHeaders = headerRows[1]; // Row 2: Actual column names
+
+    // Create section mapping
+    const sectionMapping = createSectionMapping(sectionHeaders, columnHeaders);
 
     // Fetch the specified row data
     const rowResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: `'Master Trace-VNP'!B${rowNumber}:Z${rowNumber}`,
+      range: `'Master Trace-VNP'!B${rowNumber}:AZ${rowNumber}`, // Extended range to include Agoda columns
     });
 
     const rowData = rowResponse.data.values ? rowResponse.data.values[0] : null;
@@ -58,11 +122,26 @@ exports.notifyChange = async (req, res) => {
       return res.status(200).send(`Row ${rowNumber} deleted from the database.`);
     }
 
-    // Map headers to their corresponding row values
-    const rowObject = headers.reduce((acc, header, index) => {
+    // Map headers to their corresponding row values (for general columns)
+    const rowObject = columnHeaders.reduce((acc, header, index) => {
       acc[header.trim()] = rowData[index]?.trim() || null;
       return acc;
     }, {});
+
+    console.log('Section Mapping:', JSON.stringify(sectionMapping, null, 2));
+    
+    // Test the getValueBySection function for each platform
+    console.log('Testing getValueBySection:');
+    
+    // Print all columns by section to debug
+    console.log('Columns by section:');
+    Object.entries(sectionMapping).forEach(([column, info]) => {
+      console.log(`  ${info.section}: ${column}`);
+    });
+    
+    console.log('Expedia username:', getValueBySection(rowData, sectionMapping, ['User Name', 'Email User Name'], 'expedia'));
+    console.log('Booking username:', getValueBySection(rowData, sectionMapping, ['User Name', 'Username'], 'booking'));
+    console.log('Agoda username:', getValueBySection(rowData, sectionMapping, 'User Name', 'agoda'));
 
     // console.log('Mapped row object:', rowObject);
     const parseDate = (dateString) => {
@@ -80,7 +159,7 @@ exports.notifyChange = async (req, res) => {
 
     // Build the mapped data object using header keys
     const mappedData = {
-      unique_id: rowObject['id'],
+      unique_id: rowNumber, // Use rowNumber as the unique identifier consistently
       posting_type: rowObject['Posting Type'],
       portfolio_name: rowObject['Portfolio'],
       sub_portfolio: rowObject['Sub Portfolio'],
@@ -99,33 +178,37 @@ exports.notifyChange = async (req, res) => {
         amount_collectable: rowObject['Expedia Amount Reported to Property'],
         additional_revenue: rowObject['Additional Revenue'],
         amount_confirmed: rowObject['Expedia Amount Confirmed by Property'],
-        username: rowObject['User Name'],
-        user_email: rowObject['Email User Name'],
-        user_password: rowObject['Password'],
+        // username: getValueBySection(rowData, sectionMapping, ['User Name', 'Email User Name'], 'expedia'),
+        username: null,
+        // user_email: rowObject['Email User Name'],
+        user_email: null,
+        // user_password: getValueBySection(rowData, sectionMapping, 'Password', 'expedia'),
+        user_password: null,
       },
       booking: {
         booking_id: rowObject['Booking ID'],
         review_status: rowObject['Booking.Com Review Status'],
         amount_collectable: rowObject['Booking.com Amount to be Claimed'],
         amount_confirmed: rowObject['Booking.com Amount Confirmed by Property'],
-        username: rowObject['User Name'],
-        user_password: rowObject['Password'],
-
+        // username: getValueBySection(rowData, sectionMapping, ['User Name', 'Username'], 'booking'),
+        username: null,
+        // user_password: getValueBySection(rowData, sectionMapping, 'Password', 'booking'),
+        user_password: null,
       },
       agoda: {
         agoda_id: rowObject['Agoda ID'],
         review_status: rowObject['AGODA Review Status'],
         amount_collectable: rowObject['Amount to be Claimed From Agoda'],
         amount_confirmed: rowObject['Amount Confirmed by Property'],
-        username: rowObject['User Name'],
-        user_password: rowObject['Password'],
+        username: getValueBySection(rowData, sectionMapping, 'User Name', 'agoda'),
+        user_password: getValueBySection(rowData, sectionMapping, 'Password', 'agoda'),
       },
     };
 
-    // Add the check here
-    if (!/^\d+$/.test(mappedData.unique_id?.trim())) {
-      console.log(`Invalid ID in row ${rowNumber}: ${mappedData.unique_id}`);
-      return res.status(400).send(`Invalid ID in row ${rowNumber}: ${mappedData.unique_id}`);
+    // Add the check here - rowNumber should be a valid number
+    if (!rowNumber || !/^\d+$/.test(rowNumber.toString().trim())) {
+      console.log(`Invalid row number: ${rowNumber}`);
+      return res.status(400).send(`Invalid row number: ${rowNumber}`);
     }    
 
     function escapeRegExp(string) {
@@ -268,35 +351,49 @@ exports.bulkUpload = async (req, res) => {
     // Fetch the entire sheet data, including headers
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: "'Master Trace-VNP'!B1:Z", 
+      range: "'Master Trace-VNP'!B1:AZ", // Extended range to include Agoda columns
     });
 
 
     const rows = response.data.values;
-    if (!rows || rows.length < 2) {
+    if (!rows || rows.length < 3) {
       return res.status(404).send('No data found in the sheet');
     }
 
-    // Extract headers and map them to their indices
-    const headers = rows[1];
+    // Extract both header rows
+    const sectionHeaders = rows[0]; // Row 1: EXPEDIA, BOOKING, AGODA
+    const columnHeaders = rows[1];  // Row 2: Actual column names
     const dataRows = rows.slice(2);
+    
+    // Create section mapping for bulk upload
+    const sectionMapping = createSectionMapping(sectionHeaders, columnHeaders);
+    
+    // console.log('Section Headers:', JSON.stringify(sectionHeaders));
+    // console.log('Column Headers:', JSON.stringify(columnHeaders));
+
+    // Use the same parseDate function as notifyChange
+    const parseDate = (dateString) => {
+      if (!dateString || dateString === 'To' || !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateString)) {
+        return undefined; // Return undefined for invalid date
+      }
+
+      const [month, day, year] = dateString.split('/');
+      const date = new Date(`${year}-${month}-${day}`); // Use YYYY-MM-DD format for better parsing
+
+      return isNaN(date) ? undefined : date;
+    };
 
     const getCellValue = (row, headerName) => {
-      const index = headers.indexOf(headerName);
-      const value = index >= 0 ? row[index] || '' : '';
-
-      // Check if the value is supposed to be a date
-      if (headerName === 'From' || headerName === 'To') {
-        if (value) {
-          const formattedDate = formatDate(value);
-          if (formattedDate) {
-            return new Date(formattedDate);
-          }
-          console.log(`Invalid date format: ${value} for ${headerName}`);
-          return null; // Or return a default date if needed
-        }
-        return null;
+      let index = columnHeaders.indexOf(headerName);
+      
+      // If exact match not found, try case-insensitive search
+      if (index === -1) {
+        index = columnHeaders.findIndex(header => 
+          header && header.toLowerCase().trim() === headerName.toLowerCase().trim()
+        );
       }
+      
+      const value = index >= 0 ? row[index] || '' : '';
 
       return value;
     };
@@ -342,9 +439,9 @@ exports.bulkUpload = async (req, res) => {
                 portfolio_name: portfolioId,
                 sub_portfolio: subPortfolioId,
                 property_name: propertyId,
-                from: getCellValue(row, 'From'),
-                to: getCellValue(row, 'To'),
-                next_audit_date: getCellValue(row, 'Next Review Date'),
+                from: parseDate(getCellValue(row, 'From')),
+                to: parseDate(getCellValue(row, 'To')),
+                next_audit_date: parseDate(getCellValue(row, 'Next Review Date')),
 
                 expedia: {
                   expedia_id: getCellValue(row, 'Expedia ID'),
@@ -354,9 +451,12 @@ exports.bulkUpload = async (req, res) => {
                   amount_collectable: getCellValue(row, 'Expedia Amount Reported to Property'),
                   additional_revenue: parseFloat(getCellValue(row, 'Additional Revenue')) || 0,
                   amount_confirmed: getCellValue(row, 'Expedia Amount Confirmed by Property'),
-                  username: getCellValue(row, 'User Name'),
-                  user_email: getCellValue(row, 'Email User Name'),
-                  user_password: getCellValue(row, 'Password'),
+                  // username: getValueBySection(row, sectionMapping, ['User Name', 'Email User Name'], 'expedia'),
+                  username: null,
+                  // user_email: getCellValue(row, 'Email User Name'),
+                  user_email: null,
+                  // user_password: getValueBySection(row, sectionMapping, 'Password', 'expedia'),
+                  user_password: null,
                 },
 
                 booking: {
@@ -364,8 +464,10 @@ exports.bulkUpload = async (req, res) => {
                   review_status: getCellValue(row, 'Booking.Com Review Status'),
                   amount_collectable: getCellValue(row, 'Booking.com Amount to be Claimed'),
                   amount_confirmed: getCellValue(row, 'Booking.com Amount Confirmed by Property'),
-                  username: getCellValue(row, 'User Name'),
-                  user_password: getCellValue(row, 'Password'),
+                  // username: getValueBySection(row, sectionMapping, ['User Name', 'Username'], 'booking'),
+                  username: null,
+                  // user_password: getValueBySection(row, sectionMapping, 'Password', 'booking'),
+                  user_password: null,
                 },
 
                 agoda: {
@@ -373,9 +475,8 @@ exports.bulkUpload = async (req, res) => {
                   review_status: getCellValue(row, 'AGODA Review Status'),
                   amount_collectable: getCellValue(row, 'Amount to be Claimed From Agoda'),
                   amount_confirmed: getCellValue(row, 'Amount Confirmed by Property'),
-                  username: getCellValue(row, 'User Name'),
-                  user_password: getCellValue(row, 'Password'),
-
+                  username: getValueBySection(row, sectionMapping, 'User Name', 'agoda'),
+                  user_password: getValueBySection(row, sectionMapping, 'Password', 'agoda'),
                 },
               },
             },

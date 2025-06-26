@@ -22,7 +22,11 @@ const handleJWTError = () => new AppError("Invalid token. Please log in again!",
 const handleJWTExpiredError = () => new AppError("Your token has expired. Please log in again!", 401);
 
 const sendErrorDev = (err, req, res) => {
-    logger.error(err); // Log the error
+    logger.error(`Error: ${err.message}`, { 
+        statusCode: err.statusCode, 
+        status: err.status,
+        stack: err.stack 
+    }); // Log only relevant error information
     if (req.originalUrl.startsWith("/api")) {
         res.status(err.statusCode).json({
             status: err.status,
@@ -40,7 +44,10 @@ const sendErrorDev = (err, req, res) => {
 };
 
 const sendErrorProd = (err, req, res) => {
-    logger.error(err); // Log the error
+    logger.error(`Error: ${err.message}`, { 
+        statusCode: err.statusCode, 
+        status: err.status 
+    }); // Log only relevant error information
     if (req.originalUrl.startsWith("/api")) {
         if (err.isOperational) {
             res.status(err.statusCode).json({

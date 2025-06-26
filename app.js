@@ -32,7 +32,7 @@ app.use(cors()); // To allow everyone
 //   origin: 'https://www.natours.com'
 // }));
 
-app.options('*', cors());
+app.use(cors());
 // app.options('/api/v1/tours/:id', cors());
 
 // Development logging
@@ -40,12 +40,12 @@ if (process.env.NODE_ENV == 'development') {
   app.use(morgan('dev'));
 }
 
-const limiter = rateLimit({
-  max: 1000,
-  windowMs: 60 * 60 * 1000,
-  message: 'Too many requests from this IP, please try again in an hour!',
-});
-app.use('/api', limiter);
+// const limiter = rateLimit({
+//   max: 1000,
+//   windowMs: 60 * 60 * 1000,
+//   message: 'Too many requests from this IP, please try again in an hour!',
+// });
+// app.use('/api', limiter);
 
 app.use(express.json({ limit: '10kb' }));
 // we can limit the amount of data that comes in the body
@@ -57,10 +57,10 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // Data sanitization against NoSQL query injection
-app.use(mongoSanatize());
+// app.use(mongoSanatize());
 
 // Data sanatization against XSS
-app.use(xss());
+// app.use(xss());
 
 app.use(compression()); // this is going to compress all the text that is sent to clients (not images)
 
@@ -83,7 +83,7 @@ app.get("/", (req, res) => {
 // app.use("/api/v1/reviews", reviewRouter);
 // app.use("/api/v1/bookings", bookingRouter);
 
-app.all('*', (req, res, next) => {
+app.all('/{*any}', (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server`, 404));
 });
 
