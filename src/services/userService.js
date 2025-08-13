@@ -746,15 +746,23 @@ exports.getMe = async (userId, page = 1, limit = 20) => {
     const pagePortfolioIds = portfolios.map((p) => p._id);
     const counts = await sheetDataModel.aggregate([
       { $match: { portfolio_name: { $in: pagePortfolioIds } } },
-      { $group: { _id: '$portfolio_name', propertyIds: { $addToSet: '$property_name' } } },
-      { $project: { _id: 1, propertyCount: { $size: '$propertyIds' } } },
+      {
+        $group: {
+          _id: '$portfolio_name',
+          propertyIds: { $addToSet: '$property_name' },
+          lastUpdated: { $max: '$updatedAt' },
+        },
+      },
+      { $project: { _id: 1, propertyCount: { $size: '$propertyIds' }, lastUpdated: 1 } },
     ]);
     const idToCount = new Map(counts.map((c) => [c._id.toString(), c.propertyCount]));
+    const idToLastUpdated = new Map(counts.map((c) => [c._id.toString(), c.lastUpdated]));
 
     const data = portfolios.map((p) => ({
       _id: p._id,
       name: p.name,
       propertyCount: idToCount.get(p._id.toString()) || 0,
+      lastUpdated: idToLastUpdated.get(p._id.toString()) || null,
     }));
 
     return {
@@ -785,17 +793,20 @@ exports.getMe = async (userId, page = 1, limit = 20) => {
         $group: {
           _id: '$portfolio_name',
           propertyCount: { $addToSet: '$property_name' },
+          lastUpdated: { $max: '$updatedAt' },
         },
       },
-      { $project: { _id: 1, propertyCount: { $size: '$propertyCount' } } },
+      { $project: { _id: 1, propertyCount: { $size: '$propertyCount' }, lastUpdated: 1 } },
     ]);
 
     const portfolioIdToCount = new Map(counts.map((c) => [c._id.toString(), c.propertyCount]));
+    const portfolioIdToLastUpdated = new Map(counts.map((c) => [c._id.toString(), c.lastUpdated]));
 
     const data = portfolios.map((p) => ({
       _id: p._id,
       name: p.name,
       propertyCount: portfolioIdToCount.get(p._id.toString()) || 0,
+      lastUpdated: portfolioIdToLastUpdated.get(p._id.toString()) || null,
     }));
 
     return {
@@ -826,17 +837,20 @@ exports.getMe = async (userId, page = 1, limit = 20) => {
         $group: {
           _id: '$sub_portfolio',
           propertyCount: { $addToSet: '$property_name' },
+          lastUpdated: { $max: '$updatedAt' },
         },
       },
-      { $project: { _id: 1, propertyCount: { $size: '$propertyCount' } } },
+      { $project: { _id: 1, propertyCount: { $size: '$propertyCount' }, lastUpdated: 1 } },
     ]);
 
     const subPortfolioIdToCount = new Map(counts.map((c) => [c._id.toString(), c.propertyCount]));
+    const subPortfolioIdToLastUpdated = new Map(counts.map((c) => [c._id.toString(), c.lastUpdated]));
 
     const data = subPortfolios.map((sp) => ({
       _id: sp._id,
       name: sp.name,
       propertyCount: subPortfolioIdToCount.get(sp._id.toString()) || 0,
+      lastUpdated: subPortfolioIdToLastUpdated.get(sp._id.toString()) || null,
     }));
 
     return {
