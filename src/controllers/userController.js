@@ -23,7 +23,7 @@ exports.loginUser = async (req, res, next) => {
       return res.status(200).json({
         message: result.message,
         requiresOTP: true,
-        userId: result.userId
+        userId: result.userId,
       });
     }
 
@@ -211,7 +211,7 @@ exports.verifyOTP = async (req, res, next) => {
     res.status(200).json({
       message: 'OTP verified successfully',
       user: result.user,
-      accessToken: result.accessToken
+      accessToken: result.accessToken,
     });
   } catch (error) {
     logger.error('OTP verification failed', { error: error.message });
@@ -227,10 +227,24 @@ exports.updateTwoFactorAuth = async (req, res, next) => {
 
     res.status(200).json({
       message: '2FA settings updated successfully',
-      user: result
+      user: result,
     });
   } catch (error) {
     logger.error('Failed to update 2FA settings', { error: error.message });
     next(error);
+  }
+};
+
+// get me api
+exports.getMe = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 20;
+    const result = await userService.getMe(userId, page, limit);
+    return res.status(200).json(result);
+  } catch (error) {
+    logger.error('Failed to fetch user details', { error: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

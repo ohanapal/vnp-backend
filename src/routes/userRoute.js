@@ -15,6 +15,7 @@ const {
   getAllPortfoliosSubPortfoliosProperties,
   sendForgetPasswordOTP,
   verifyOTP,
+  getMe,
 } = require('../controllers/userController');
 const { authMiddleware } = require('../middlewares/authMiddleware');
 
@@ -31,6 +32,7 @@ router.route('/forgot-password-otp').post(sendForgetPasswordOTP);
 
 // User management routes
 router.put('/own-profile', authMiddleware('admin', 'portfolio', 'sub-portfolio', 'property'), updateOwnProfile);
+router.get('/me', authMiddleware('admin', 'portfolio', 'sub-portfolio', 'property'), getMe);
 
 router.put('/update/:id', authMiddleware('admin'), updateUser);
 router.delete('/delete/:id', authMiddleware('admin'), deleteUser);

@@ -16,7 +16,6 @@ const logger = require('../utils/logger'); // Import the logger
 const sheetDataModel = require('../models/sheetDataModel');
 const OTP = require('../models/otpModel');
 
-
 exports.createAdmin = async (userData) => {
   const { password, ...otherData } = userData; // Destructure password from other user data
 
@@ -89,13 +88,13 @@ exports.loginUser = async (userData) => {
 const generateAndSaveOTP = async (userId) => {
   // Generate a 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  
+
   // Save OTP to database
   await OTP.create({
     userId,
-    otp: await bcrypt.hash(otp, 10)
+    otp: await bcrypt.hash(otp, 10),
   });
-console.log('Generated OTP:', otp); // Log the generated OTP for debugging
+  console.log('Generated OTP:', otp); // Log the generated OTP for debugging
   return otp;
 };
 
@@ -168,9 +167,9 @@ const sendOTP = async (email, otp) => {
 // Verify OTP
 exports.verifyOTP = async (userId, otpInput) => {
   // First check if there's any recent valid OTP (used or unused)
-  const recentOTP = await OTP.findOne({ 
+  const recentOTP = await OTP.findOne({
     userId,
-    createdAt: { $gt: new Date(Date.now() - 5 * 60 * 1000) } // within last 5 minutes
+    createdAt: { $gt: new Date(Date.now() - 5 * 60 * 1000) }, // within last 5 minutes
   }).sort({ createdAt: -1 });
 
   // If no recent OTP exists at all
@@ -179,9 +178,9 @@ exports.verifyOTP = async (userId, otpInput) => {
   }
 
   // Now get the most recent unused OTP
-  const otpRecord = await OTP.findOne({ 
+  const otpRecord = await OTP.findOne({
     userId,
-    used: { $ne: true }  // Only get unused OTPs
+    used: { $ne: true }, // Only get unused OTPs
   }).sort({ createdAt: -1 });
 
   // If recent OTP exists but no unused OTP found
@@ -190,7 +189,7 @@ exports.verifyOTP = async (userId, otpInput) => {
   }
 
   const isValidOTP = await bcrypt.compare(otpInput, otpRecord.otp);
-  
+
   if (!isValidOTP) {
     throw new AppError('Invalid verification code. Please check and try again.', 401);
   }
@@ -286,7 +285,7 @@ exports.inviteUser = async (userData, id, currentUserRole) => {
   If you have any questions or need support getting started, our team is here to assist you every step of the way. Simply reply to this email or reach out to sales@vnpsolutions.com.
   We look forward to helping you recover every eligible dollar—efficiently and effortlessly.
   Warm regards,
-  VNP Solutions Team`
+  VNP Solutions Team`;
 
   const emailHTML = `<body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f4; color: #333333; line-height: 1.6;">
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
@@ -334,7 +333,7 @@ exports.inviteUser = async (userData, id, currentUserRole) => {
         </tr>
     </table>
 </body>
-`
+`;
   const emailSubject = 'Welcome to VNP Solutions – Your Dashboard Access Awaits';
   const emailSend = await SendEmailUtils(email, emailMessage, emailSubject, emailHTML);
   console.log(emailSend);
@@ -723,4 +722,156 @@ exports.getAllPortfoliosSubPortfoliosPropertiesName = async (role, connectedEnti
     console.error('Error fetching data:', error.message);
     throw error;
   }
+};
+
+exports.getMe = async (userId, page = 1, limit = 20) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const role = user.role;
+  const skip = (page - 1) * limit;
+
+  // Helper to convert connected ids to ObjectId[]
+  const connectedIds = Array.isArray(user.connected_entity_id) ? user.connected_entity_id.map((id) => new ObjectId(id)) : [];
+
+  if (role === 'admin') {
+    // For admin, return all portfolios with propertyCount and pagination
+    const [total, portfolios] = await Promise.all([
+      Portfolio.countDocuments({}),
+      Portfolio.find({}, { name: 1 }).skip(skip).limit(limit).lean(),
+    ]);
+
+    const pagePortfolioIds = portfolios.map((p) => p._id);
+    const counts = await sheetDataModel.aggregate([
+      { $match: { portfolio_name: { $in: pagePortfolioIds } } },
+      { $group: { _id: '$portfolio_name', propertyIds: { $addToSet: '$property_name' } } },
+      { $project: { _id: 1, propertyCount: { $size: '$propertyIds' } } },
+    ]);
+    const idToCount = new Map(counts.map((c) => [c._id.toString(), c.propertyCount]));
+
+    const data = portfolios.map((p) => ({
+      _id: p._id,
+      name: p.name,
+      propertyCount: idToCount.get(p._id.toString()) || 0,
+    }));
+
+    return {
+      success: true,
+      role,
+      data,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+      },
+    };
+  }
+
+  if (role === 'portfolio') {
+    const [total, portfolios] = await Promise.all([
+      Portfolio.countDocuments({ _id: { $in: connectedIds } }),
+      Portfolio.find({ _id: { $in: connectedIds } }, { name: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    // Count distinct properties per portfolio using sheet data
+    const counts = await sheetDataModel.aggregate([
+      { $match: { portfolio_name: { $in: connectedIds } } },
+      {
+        $group: {
+          _id: '$portfolio_name',
+          propertyCount: { $addToSet: '$property_name' },
+        },
+      },
+      { $project: { _id: 1, propertyCount: { $size: '$propertyCount' } } },
+    ]);
+
+    const portfolioIdToCount = new Map(counts.map((c) => [c._id.toString(), c.propertyCount]));
+
+    const data = portfolios.map((p) => ({
+      _id: p._id,
+      name: p.name,
+      propertyCount: portfolioIdToCount.get(p._id.toString()) || 0,
+    }));
+
+    return {
+      success: true,
+      role,
+      data,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+      },
+    };
+  }
+
+  if (role === 'sub-portfolio') {
+    const [total, subPortfolios] = await Promise.all([
+      SubPortfolio.countDocuments({ _id: { $in: connectedIds } }),
+      SubPortfolio.find({ _id: { $in: connectedIds } }, { name: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    // Count distinct properties per sub-portfolio using sheet data
+    const counts = await sheetDataModel.aggregate([
+      { $match: { sub_portfolio: { $in: connectedIds } } },
+      {
+        $group: {
+          _id: '$sub_portfolio',
+          propertyCount: { $addToSet: '$property_name' },
+        },
+      },
+      { $project: { _id: 1, propertyCount: { $size: '$propertyCount' } } },
+    ]);
+
+    const subPortfolioIdToCount = new Map(counts.map((c) => [c._id.toString(), c.propertyCount]));
+
+    const data = subPortfolios.map((sp) => ({
+      _id: sp._id,
+      name: sp.name,
+      propertyCount: subPortfolioIdToCount.get(sp._id.toString()) || 0,
+    }));
+
+    return {
+      success: true,
+      role,
+      data,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+      },
+    };
+  }
+
+  if (role === 'property') {
+    const [total, properties] = await Promise.all([
+      Property.countDocuments({ _id: { $in: connectedIds } }),
+      Property.find({ _id: { $in: connectedIds } }, { name: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+    const data = properties.map((pr) => ({ _id: pr._id, name: pr.name }));
+    return {
+      success: true,
+      role,
+      data,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+      },
+    };
+  }
+
+  // Fallback: return empty list for unknown role
+  return { success: true, role, data: [], pagination: { currentPage: page, totalPages: 0, totalItems: 0 } };
 };
