@@ -265,7 +265,7 @@ const PropertyModel = require('../models/propertyModel');
 //     throw new AppError('Failed to calculate metrics.', 500);
 //   }
 // };
-const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, startDate, endDate) => {
+const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, startDate, endDate, entityId) => {
   try {
     let query = {};
 
@@ -273,13 +273,13 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
+      if (isNaN(start.valueOf()) || isNaN(end.valueOf())) {
+        throw new AppError('Invalid date range provided', 400);
+      }
       console.log('Adding date range', start, end);
 
       query = {
-        $and: [
-          { from: { $lte: end } }, // Database range starts before the query range ends
-          { to: { $gte: start } }, // Database range ends after the query range starts
-        ],
+        $and: [{ from: { $lte: end } }, { to: { $gte: start } }],
       };
     }
 
@@ -288,28 +288,32 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
         throw new AppError('No connected entity IDs provided for this role.', 403);
       }
 
-      const entityQuery = [];
-      if (role === 'portfolio') {
-        entityQuery.push({ portfolio_name: { $in: connectedEntityIds } });
-      }
-      if (role === 'sub-portfolio') {
-        entityQuery.push({ sub_portfolio: { $in: connectedEntityIds } });
-      }
-      if (role === 'property') {
-        entityQuery.push({ property_name: { $in: connectedEntityIds } });
-      }
+      // If a specific entity id is provided, filter strictly to that entity
+      if (entityId) {
+        if (role === 'portfolio') query.portfolio_name = entityId;
+        if (role === 'sub-portfolio') query.sub_portfolio = entityId;
+        if (role === 'property') query.property_name = entityId;
+      } else {
+        const entityQuery = [];
+        if (role === 'portfolio') {
+          entityQuery.push({ portfolio_name: { $in: connectedEntityIds } });
+        }
+        if (role === 'sub-portfolio') {
+          entityQuery.push({ sub_portfolio: { $in: connectedEntityIds } });
+        }
+        if (role === 'property') {
+          entityQuery.push({ property_name: { $in: connectedEntityIds } });
+        }
 
-      if (entityQuery.length > 0) {
-        query.$or = entityQuery;
+        if (entityQuery.length > 0) {
+          query.$or = entityQuery;
+        }
       }
     } else {
       // For admin, if a selectedPortfolio is provided (and not "all"), filter by that portfolio.
-      if (selectedPortfolio && selectedPortfolio !== 'all') {
-        const portfolio = await portfolioModel.findOne({ name: selectedPortfolio });
-        if (!portfolio) {
-          throw new AppError(`Portfolio with name "${selectedPortfolio}" not found.`, 404);
-        }
-        query.portfolio_name = portfolio._id;
+      if (entityId) {
+        // Admin can filter by explicit entity id as well
+        query.$or = [{ portfolio_name: entityId }, { sub_portfolio: entityId }, { property_name: entityId }];
       }
       // Otherwise, admin sees all data (no further filtering by connectedEntityIds)
     }
@@ -411,8 +415,8 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
         expedia: totals.expediaProperties,
         booking: totals.bookingProperties,
         agoda: totals.agodaProperties,
-        total: totalProperties
-      }
+        total: totalProperties,
+      },
     };
 
     // Add logic for next_audit_date based on role:

@@ -3,7 +3,7 @@ const { calculateMetrics } = require('../services/cardService');
 const getMetrics = async (req, res) => {
   // console.log('getMetrics requested', req);
   try {
-    const { selectedPortfolio, startdate, enddate } = req.query;
+    const { selectedPortfolio, startdate, enddate, entity_id } = req.query;
 
     // console.log('getMetrics date', startdate, enddate);
     // If dates are not both provided, return all the data
@@ -13,7 +13,7 @@ const getMetrics = async (req, res) => {
 
     const { role, connected_entity_id: connectedEntityIds } = req.user;
 
-    const metrics = await calculateMetrics(role, connectedEntityIds, selectedPortfolio, startdate, enddate);
+    const metrics = await calculateMetrics(role, connectedEntityIds, selectedPortfolio, startdate, enddate, entity_id);
     res.status(200).json(metrics);
   } catch (error) {
     console.error('Error in getMetrics:', error);
