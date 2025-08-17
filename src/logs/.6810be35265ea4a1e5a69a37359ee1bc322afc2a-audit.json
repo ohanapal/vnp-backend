@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/home/mahi/Projects/VNP/vnp-dashboard/vnp-backend/src/logs/.6810be35265ea4a1e5a69a37359ee1bc322afc2a-audit.json",
+    "files": [
+        {
+            "date": 1755414339076,
+            "name": "/home/mahi/Projects/VNP/vnp-dashboard/vnp-backend/src/logs/application-2025-08-17.log",
+            "hash": "204f0e6a2ed243ae2c8a7ce2029ac5cf80521d87853b75940750a0cf25bca881"
+        }
+    ],
+    "hashType": "sha256"
+}

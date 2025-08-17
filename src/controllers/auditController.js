@@ -78,6 +78,8 @@ const sheetDataController = async (req, res) => {
       startDate,
       endDate,
       nextAuditId, // New filter parameter from the frontend
+      multiplePropertyOwner,
+      entity_id,
     } = req.query;
 
     logger.info('Received request to fetch sheet data', { user: req.user, query: req.query });
@@ -100,6 +102,8 @@ const sheetDataController = async (req, res) => {
       filters,
       role,
       connectedEntityIds,
+      multiplePropertyOwner: multiplePropertyOwner === 'true',
+      entityId: entity_id,
     });
     // console.log('filters', filters);
 

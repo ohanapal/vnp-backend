@@ -6,7 +6,18 @@ const portfolioModel = require('../models/portfolioModel');
 const logger = require('../utils/logger'); // Assuming logger is set up in utils/logger.js
 const axios = require('axios'); // Ensure axios is installed and imported
 
-const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filters, role, connectedEntityIds }) => {
+const getAuditSheetData = async ({
+  page,
+  limit,
+  search,
+  sortBy,
+  sortOrder,
+  filters,
+  role,
+  connectedEntityIds,
+  multiplePropertyOwner = false,
+  entityId,
+}) => {
   try {
     const skip = (page - 1) * limit;
     logger.info('Building query for fetching sheet data', { page, limit, filters, role });
@@ -40,7 +51,7 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
         const idSearchConditions = [
           { 'booking.booking_id': search },
           { 'expedia.expedia_id': search },
-          { 'agoda.agoda_id': search }
+          { 'agoda.agoda_id': search },
         ];
 
         if (role === 'admin') {
@@ -48,20 +59,11 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
         } else {
           // For non-admin, combine ID search with role-based restrictions
           if (role === 'portfolio') {
-            query.$and = [
-              { $or: idSearchConditions },
-              { portfolio_name: { $in: connectedEntityIds } }
-            ];
+            query.$and = [{ $or: idSearchConditions }, { portfolio_name: { $in: connectedEntityIds } }];
           } else if (role === 'sub-portfolio') {
-            query.$and = [
-              { $or: idSearchConditions },
-              { sub_portfolio: { $in: connectedEntityIds } }
-            ];
+            query.$and = [{ $or: idSearchConditions }, { sub_portfolio: { $in: connectedEntityIds } }];
           } else if (role === 'property') {
-            query.$and = [
-              { $or: idSearchConditions },
-              { property_name: { $in: connectedEntityIds } }
-            ];
+            query.$and = [{ $or: idSearchConditions }, { property_name: { $in: connectedEntityIds } }];
           }
         }
       } else {
@@ -74,41 +76,29 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
         const matchingPropertyIds = matchingProperties.map((property) => property._id);
 
         if (role === 'admin') {
-          query.$or = [
-            { portfolio_name: { $in: matchingPortfolioIds } },
-            { property_name: { $in: matchingPropertyIds } }
-          ];
+          query.$or = [{ portfolio_name: { $in: matchingPortfolioIds } }, { property_name: { $in: matchingPropertyIds } }];
         } else {
           // For non-admin, combine property search with role-based restrictions
           if (role === 'portfolio') {
             query.$and = [
               {
-                $or: [
-                  { portfolio_name: { $in: matchingPortfolioIds } },
-                  { property_name: { $in: matchingPropertyIds } }
-                ]
+                $or: [{ portfolio_name: { $in: matchingPortfolioIds } }, { property_name: { $in: matchingPropertyIds } }],
               },
-              { portfolio_name: { $in: connectedEntityIds } }
+              { portfolio_name: { $in: connectedEntityIds } },
             ];
           } else if (role === 'sub-portfolio') {
             query.$and = [
               {
-                $or: [
-                  { portfolio_name: { $in: matchingPortfolioIds } },
-                  { property_name: { $in: matchingPropertyIds } }
-                ]
+                $or: [{ portfolio_name: { $in: matchingPortfolioIds } }, { property_name: { $in: matchingPropertyIds } }],
               },
-              { sub_portfolio: { $in: connectedEntityIds } }
+              { sub_portfolio: { $in: connectedEntityIds } },
             ];
           } else if (role === 'property') {
             query.$and = [
               {
-                $or: [
-                  { portfolio_name: { $in: matchingPortfolioIds } },
-                  { property_name: { $in: matchingPropertyIds } }
-                ]
+                $or: [{ portfolio_name: { $in: matchingPortfolioIds } }, { property_name: { $in: matchingPropertyIds } }],
               },
-              { property_name: { $in: connectedEntityIds } }
+              { property_name: { $in: connectedEntityIds } },
             ];
           }
         }
@@ -116,12 +106,19 @@ const getAuditSheetData = async ({ page, limit, search, sortBy, sortOrder, filte
     } else {
       // If no search, apply role-based restrictions
       if (role !== 'admin') {
-        if (role === 'portfolio') {
-          query.portfolio_name = { $in: connectedEntityIds };
-        } else if (role === 'sub-portfolio') {
-          query.sub_portfolio = { $in: connectedEntityIds };
-        } else if (role === 'property') {
-          query.property_name = { $in: connectedEntityIds };
+        if (entityId) {
+          if (role === 'portfolio') query.portfolio_name = new ObjectId(entityId);
+          else if (role === 'sub-portfolio') query.sub_portfolio = new ObjectId(entityId);
+          else if (role === 'property') query.property_name = new ObjectId(entityId);
+        } else {
+          if (role === 'portfolio') {
+            query.portfolio_name = { $in: connectedEntityIds };
+          } else if (role === 'sub-portfolio') {
+            query.sub_portfolio = { $in: connectedEntityIds };
+          } else if (role === 'property') {
+            // If multiplePropertyOwner flag is true and no entityId, include all connected properties
+            query.property_name = multiplePropertyOwner ? { $in: connectedEntityIds } : { $in: connectedEntityIds };
+          }
         }
       }
     }

@@ -265,7 +265,15 @@ const PropertyModel = require('../models/propertyModel');
 //     throw new AppError('Failed to calculate metrics.', 500);
 //   }
 // };
-const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, startDate, endDate, entityId) => {
+const calculateMetrics = async (
+  role,
+  connectedEntityIds,
+  selectedPortfolio,
+  startDate,
+  endDate,
+  entityId,
+  multiplePropertyOwner = false,
+) => {
   try {
     let query = {};
 
@@ -276,7 +284,7 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       if (isNaN(start.valueOf()) || isNaN(end.valueOf())) {
         throw new AppError('Invalid date range provided', 400);
       }
-      console.log('Adding date range', start, end);
+      console.log('calculateMetrics: date range', { start, end });
 
       query = {
         $and: [{ from: { $lte: end } }, { to: { $gte: start } }],
@@ -284,6 +292,7 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
     }
 
     if (role !== 'admin') {
+      console.log('calculateMetrics: non-admin role branch', { role, entityId, multiplePropertyOwner });
       if (!connectedEntityIds || connectedEntityIds.length === 0) {
         throw new AppError('No connected entity IDs provided for this role.', 403);
       }
@@ -293,6 +302,10 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
         if (role === 'portfolio') query.portfolio_name = entityId;
         if (role === 'sub-portfolio') query.sub_portfolio = entityId;
         if (role === 'property') query.property_name = entityId;
+      } else if (multiplePropertyOwner && role === 'property') {
+        // For property role with multiple ownership flag, include all connected properties
+        query.property_name = { $in: connectedEntityIds };
+        console.log('calculateMetrics: multi-property owner query', { query });
       } else {
         const entityQuery = [];
         if (role === 'portfolio') {
@@ -314,11 +327,13 @@ const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, sta
       if (entityId) {
         // Admin can filter by explicit entity id as well
         query.$or = [{ portfolio_name: entityId }, { sub_portfolio: entityId }, { property_name: entityId }];
+        console.log('calculateMetrics: admin entity filter', { query });
       }
       // Otherwise, admin sees all data (no further filtering by connectedEntityIds)
     }
 
     // Fetch matching documents from sheetDataModel
+    console.log('calculateMetrics: final query', JSON.stringify(query));
     const documents = await sheetDataModel.find(query, {
       'expedia.amount_collectable': 1,
       'booking.amount_collectable': 1,
