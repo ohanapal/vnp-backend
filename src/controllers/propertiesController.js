@@ -23,10 +23,12 @@ const sheetDataController = async (req, res) => {
       sub_portfolio,
       posting_type,
       id,
+      startDate,
+      endDate,
     } = req.query;
     // console.log('query', req.query);
     // console.log('req, query', req.query);
-   // const decodedPostingType = posting_type ? decodeURIComponent(posting_type.trim()) : undefined;
+    // const decodedPostingType = posting_type ? decodeURIComponent(posting_type.trim()) : undefined;
 
     // Build the filters object
     const filters = {};
@@ -34,6 +36,10 @@ const sheetDataController = async (req, res) => {
     if (posting_type) filters.posting_type = posting_type;
     if (portfolio) filters.portfolio = portfolio;
     if (id) filters.id = id;
+    if (startDate && endDate) {
+      filters.startDate = startDate;
+      filters.endDate = endDate;
+    }
     const result = await getPropertySheetData({
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
@@ -196,8 +202,6 @@ const deletePropertyController = async (req, res) => {
     return res.status(statusCode).json({ success: false, message: error.message });
   }
 };
-
-
 
 module.exports = {
   sheetDataController,

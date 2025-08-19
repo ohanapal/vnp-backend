@@ -1,0 +1,2 @@
+2025-08-19 16:18:10 [[31merror[39m]: Login failed {"email":"dev.mahinur.rahman@gmail.com","error":"Invalid password"}
+2025-08-19 16:18:10 [[31merror[39m]: Invalid password {"statusCode":400,"status":"fail","isOperational":true}
