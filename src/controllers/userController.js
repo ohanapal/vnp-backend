@@ -109,6 +109,8 @@ exports.getAllUsers = async (req, res) => {
     const subPortfolio = req.query.sub_portfolio || null;
     const property = req.query.property || null;
     const roleFilter = req.query.role || null; // Role filter for admin users only
+    const startDate = req.query.startDate || null;
+    const endDate = req.query.endDate || null;
 
     const currentUserId = req.user.id; // Assuming req.user contains logged-in user's details
     const role = req.user.role;
@@ -125,6 +127,8 @@ exports.getAllUsers = async (req, res) => {
       property,
       roleFilter,
       connectedEntityIds,
+      startDate,
+      endDate,
     );
 
     res.status(200).json(result);

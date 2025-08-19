@@ -459,6 +459,8 @@ exports.getAllUsers = async (
   property,
   roleFilter, // New parameter for role filter
   connectedEntityIds,
+  startDate,
+  endDate,
 ) => {
   const skip = (page - 1) * limit;
   let query = {};
@@ -474,6 +476,8 @@ exports.getAllUsers = async (
     property,
     roleFilter,
     connectedEntityIds,
+    startDate,
+    endDate,
   });
 
   // Restrict query based on user role
@@ -541,6 +545,22 @@ exports.getAllUsers = async (
   // Apply role filter if provided
   if (roleFilter) {
     query.role = roleFilter;
+  }
+
+  // Apply date range filter when both dates are present
+  if (startDate && endDate) {
+    try {
+      const from = new Date(startDate);
+      const to = new Date(endDate);
+      if (!isNaN(from.valueOf()) && !isNaN(to.valueOf())) {
+        // Normalize to UTC day bounds to avoid timezone issues
+        from.setUTCHours(0, 0, 0, 0);
+        to.setUTCHours(23, 59, 59, 999);
+        query.createdAt = { $gte: from, $lte: to };
+      }
+    } catch (e) {
+      // ignore invalid dates
+    }
   }
 
   console.log('Final query:', query);
