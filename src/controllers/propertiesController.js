@@ -25,6 +25,7 @@ const sheetDataController = async (req, res) => {
       id,
       startDate,
       endDate,
+      entityId,
     } = req.query;
     // console.log('query', req.query);
     // console.log('req, query', req.query);
@@ -40,6 +41,7 @@ const sheetDataController = async (req, res) => {
       filters.startDate = startDate;
       filters.endDate = endDate;
     }
+    if (entityId) filters.entityId = entityId;
     const result = await getPropertySheetData({
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),

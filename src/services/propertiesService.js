@@ -6,7 +6,17 @@ const AppError = require('../utils/appError');
 const { ObjectId } = require('mongodb');
 const userModel = require('../models/userModel');
 
-const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, filters, role, connectedEntityIds }) => {
+const getPropertySheetData = async ({
+  page,
+  limit,
+  search,
+  sortBy,
+  sortOrder,
+  filters,
+  role,
+  connectedEntityIds,
+  entityId,
+}) => {
   try {
     const skip = (page - 1) * limit;
     const query = {};
@@ -21,7 +31,7 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
         const idSearchConditions = [
           { 'booking.booking_id': search },
           { 'expedia.expedia_id': search },
-          { 'agoda.agoda_id': search }
+          { 'agoda.agoda_id': search },
         ];
 
         if (role === 'admin') {
@@ -29,20 +39,11 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
         } else {
           // For non-admin, combine ID search with role-based restrictions
           if (role === 'portfolio') {
-            query.$and = [
-              { $or: idSearchConditions },
-              { portfolio_name: { $in: connectedEntityIds } }
-            ];
+            query.$and = [{ $or: idSearchConditions }, { portfolio_name: { $in: connectedEntityIds } }];
           } else if (role === 'sub-portfolio') {
-            query.$and = [
-              { $or: idSearchConditions },
-              { sub_portfolio: { $in: connectedEntityIds } }
-            ];
+            query.$and = [{ $or: idSearchConditions }, { sub_portfolio: { $in: connectedEntityIds } }];
           } else if (role === 'property') {
-            query.$and = [
-              { $or: idSearchConditions },
-              { property_name: { $in: connectedEntityIds } }
-            ];
+            query.$and = [{ $or: idSearchConditions }, { property_name: { $in: connectedEntityIds } }];
           }
         }
       } else {
@@ -55,20 +56,11 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
         } else {
           // For non-admin, combine property search with role-based restrictions
           if (role === 'portfolio') {
-            query.$and = [
-              { property_name: { $in: matchingPropertyIds } },
-              { portfolio_name: { $in: connectedEntityIds } }
-            ];
+            query.$and = [{ property_name: { $in: matchingPropertyIds } }, { portfolio_name: { $in: connectedEntityIds } }];
           } else if (role === 'sub-portfolio') {
-            query.$and = [
-              { property_name: { $in: matchingPropertyIds } },
-              { sub_portfolio: { $in: connectedEntityIds } }
-            ];
+            query.$and = [{ property_name: { $in: matchingPropertyIds } }, { sub_portfolio: { $in: connectedEntityIds } }];
           } else if (role === 'property') {
-            query.$and = [
-              { property_name: { $in: matchingPropertyIds } },
-              { property_name: { $in: connectedEntityIds } }
-            ];
+            query.$and = [{ property_name: { $in: matchingPropertyIds } }, { property_name: { $in: connectedEntityIds } }];
           }
         }
       }
@@ -82,6 +74,32 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
         } else if (role === 'property') {
           query.property_name = { $in: connectedEntityIds };
         }
+      }
+    }
+
+    // Handle explicit entityId filter for all roles
+    if (entityId) {
+      const castId = ObjectId.isValid(entityId) ? new ObjectId(entityId) : entityId;
+      let entityCondition = {};
+      if (role === 'admin') {
+        entityCondition = { $or: [{ portfolio_name: castId }, { sub_portfolio: castId }, { property_name: castId }] };
+      } else if (role === 'portfolio') {
+        entityCondition = { portfolio_name: castId };
+      } else if (role === 'sub-portfolio') {
+        entityCondition = { sub_portfolio: castId };
+      } else if (role === 'property') {
+        entityCondition = { property_name: castId };
+      }
+
+      // Merge entity condition with any existing conditions safely
+      if (query.$and) {
+        query.$and.push(entityCondition);
+      } else if (query.$or && entityCondition.$or) {
+        // Intersect existing $or (e.g., search) with entity $or
+        query.$and = [{ $or: query.$or }, entityCondition];
+        delete query.$or;
+      } else {
+        Object.assign(query, entityCondition);
       }
     }
 
@@ -101,10 +119,9 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
         const end = new Date(filters.endDate);
         end.setHours(23, 59, 59, 999);
 
-        query.$and = [
-          { from: { $lte: end } },
-          { to: { $gte: start } },
-        ];
+        const dateConds = [{ from: { $lte: end } }, { to: { $gte: start } }];
+        if (query.$and) query.$and.push(...dateConds);
+        else query.$and = dateConds;
       }
     } else {
       // Apply filters for non-admin
@@ -122,10 +139,9 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
         const end = new Date(filters.endDate);
         end.setHours(23, 59, 59, 999);
 
-        query.$and = [
-          { from: { $lte: end } },
-          { to: { $gte: start } },
-        ];
+        const dateConds = [{ from: { $lte: end } }, { to: { $gte: start } }];
+        if (query.$and) query.$and.push(...dateConds);
+        else query.$and = dateConds;
       }
     }
 
@@ -136,7 +152,7 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
     }
 
     // Fetch sheet data
-    console.log(query)
+    console.log(query);
     const sheetData = await sheetDataModel
       .find(query)
       .populate('portfolio_name', 'name')
@@ -168,14 +184,13 @@ const getPropertySheetData = async ({ page, limit, search, sortBy, sortOrder, fi
 
     // Count total documents for the query
     const total = await sheetDataModel.countDocuments(query);
-    console.log("total", total)
+    console.log('total', total);
 
     return { data: enrichedSheetData, total };
   } catch (error) {
     throw new Error(`Error fetching property sheet data: ${error.message}`);
   }
 };
-
 
 const updateSheetDataService = async (id, data, role, connectedEntityIds) => {
   // Find the sheet data by ID
@@ -424,10 +439,6 @@ const deleteProperty = async (id) => {
 
   return deletedProperty;
 };
-
-
-
-
 
 module.exports = {
   getPropertySheetData,

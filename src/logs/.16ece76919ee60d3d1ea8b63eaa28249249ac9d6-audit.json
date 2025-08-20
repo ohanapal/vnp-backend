@@ -19,6 +19,11 @@
             "date": 1755582325010,
             "name": "/home/mahi/Projects/VNP/vnp-dashboard/vnp-backend/src/logs/error-2025-08-19.log",
             "hash": "16cdbd9cc2dab1a75de6221aef0ee11509c8fa3eff054eea5a62a5c8583b70f2"
+        },
+        {
+            "date": 1755670436460,
+            "name": "/home/mahi/Projects/VNP/vnp-dashboard/vnp-backend/src/logs/error-2025-08-20.log",
+            "hash": "9d4ad27963c02e190e1959bea69917521dd0016dcb453cf3f79450772135a650"
         }
     ],
     "hashType": "sha256"
