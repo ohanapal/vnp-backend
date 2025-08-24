@@ -474,7 +474,6 @@ const calculateMetrics = async (
       if (isNaN(start.valueOf()) || isNaN(end.valueOf())) {
         throw new AppError('Invalid date range provided', 400);
       }
-      console.log('calculateMetrics: date range', { start, end });
 
       query = {
         $and: [{ from: { $lte: end } }, { to: { $gte: start } }],
@@ -482,7 +481,6 @@ const calculateMetrics = async (
     }
 
     if (role !== 'admin') {
-      console.log('calculateMetrics: non-admin role branch', { role, entityId, multiplePropertyOwner });
       if (!connectedEntityIds || connectedEntityIds.length === 0) {
         throw new AppError('No connected entity IDs provided for this role.', 403);
       }
@@ -495,7 +493,6 @@ const calculateMetrics = async (
       } else if (multiplePropertyOwner && role === 'property') {
         // For property role with multiple ownership flag, include all connected properties
         query.property_name = { $in: connectedEntityIds };
-        console.log('calculateMetrics: multi-property owner query', { query });
       } else {
         const entityQuery = [];
         if (role === 'portfolio') {
@@ -517,7 +514,6 @@ const calculateMetrics = async (
       if (entityId) {
         // Admin can filter by explicit entity id as well
         query.$or = [{ portfolio_name: entityId }, { sub_portfolio: entityId }, { property_name: entityId }];
-        console.log('calculateMetrics: admin entity filter', { query });
       }
       // Otherwise, admin sees all data (no further filtering by connectedEntityIds)
     }

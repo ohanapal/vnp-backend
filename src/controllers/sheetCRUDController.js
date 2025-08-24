@@ -11,7 +11,7 @@ const moment = require('moment');
 
 const wss = new WebSocket.Server({ port: 8080 });
 wss.on('connection', (ws) => {
-  console.log('Client connected');
+  console.info('Client connected');
 });
 
 exports.notifyChange = async (req, res) => {
@@ -29,7 +29,7 @@ exports.notifyChange = async (req, res) => {
     const headerResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
       //range: `Sheet1!A2:Z2`, // Change to row 2
-      range: "'Master Trace-VNP'!B2:Z2"
+      range: "'Master Trace-VNP'!B2:Z2",
     });
 
     const headers = headerResponse.data.values ? headerResponse.data.values[0] : []; // Fetch headers from row 2
@@ -90,7 +90,7 @@ exports.notifyChange = async (req, res) => {
       from: parseDate(rowObject['From']),
       to: parseDate(rowObject['To']),
       next_audit_date: parseDate(rowObject['Next Review Date']),
-      
+
       expedia: {
         expedia_id: rowObject['Expedia ID'],
         review_status: rowObject['Expedia Review Status'],
@@ -110,7 +110,6 @@ exports.notifyChange = async (req, res) => {
         amount_confirmed: rowObject['Booking.com Amount Confirmed by Property'],
         username: rowObject['User Name'],
         user_password: rowObject['Password'],
-
       },
       agoda: {
         agoda_id: rowObject['Agoda ID'],
@@ -126,7 +125,7 @@ exports.notifyChange = async (req, res) => {
     if (!/^\d+$/.test(mappedData.unique_id?.trim())) {
       console.log(`Invalid ID in row ${rowNumber}: ${mappedData.unique_id}`);
       return res.status(400).send(`Invalid ID in row ${rowNumber}: ${mappedData.unique_id}`);
-    }    
+    }
 
     function escapeRegExp(string) {
       return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -264,13 +263,11 @@ exports.bulkUpload = async (req, res) => {
       return res.status(400).send('Missing required field: sheetId');
     }
 
-    
     // Fetch the entire sheet data, including headers
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: "'Master Trace-VNP'!B1:Z", 
+      range: "'Master Trace-VNP'!B1:Z",
     });
-
 
     const rows = response.data.values;
     if (!rows || rows.length < 2) {
@@ -375,7 +372,6 @@ exports.bulkUpload = async (req, res) => {
                   amount_confirmed: getCellValue(row, 'Amount Confirmed by Property'),
                   username: getCellValue(row, 'User Name'),
                   user_password: getCellValue(row, 'Password'),
-
                 },
               },
             },
@@ -607,7 +603,6 @@ exports.updateDatabase = async (req, res) => {
   }
 };
 
-
 exports.showsomefield = async (req, res) => {
   const client = await auth.getClient();
   const sheets = google.sheets({ version: 'v4', auth: client });
@@ -640,26 +635,26 @@ exports.showsomefield = async (req, res) => {
     };
 
     // Prepare data with email fields
-    const emailData = dataRows.map((row, index) => {
-      const uniqueId = getCellValue(row, 'id');
-      if (!uniqueId) {
-        console.log(`Skipping row ${index + 1}: Missing or invalid Serial Number`);
-        return null;
-      }
+    const emailData = dataRows
+      .map((row, index) => {
+        const uniqueId = getCellValue(row, 'id');
+        if (!uniqueId) {
+          console.log(`Skipping row ${index + 1}: Missing or invalid Serial Number`);
+          return null;
+        }
 
-      return {
-        id: uniqueId,
-        expedia_email: getCellValue(row, 'EXPEDIA Email Assoicated'),
-        property_email: getCellValue(row, 'Property Contact Email'),
-        portfolio_email: getCellValue(row, 'Portfolio Contact Email'),
-        multi_email: getCellValue(row, 'Multiple Portfolio Email Address'),
-      };
-    }).filter(item => item !== null);
+        return {
+          id: uniqueId,
+          expedia_email: getCellValue(row, 'EXPEDIA Email Assoicated'),
+          property_email: getCellValue(row, 'Property Contact Email'),
+          portfolio_email: getCellValue(row, 'Portfolio Contact Email'),
+          multi_email: getCellValue(row, 'Multiple Portfolio Email Address'),
+        };
+      })
+      .filter((item) => item !== null);
 
-    
-
-    res.status(200).send({ 
-      message: 'Email data retrieved successfully', 
+    res.status(200).send({
+      message: 'Email data retrieved successfully',
       total_records: emailData.length,
       data: emailData,
     });

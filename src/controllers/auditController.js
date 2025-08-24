@@ -24,7 +24,6 @@ const AppError = require('../utils/appError');
 //       startDate,
 //       endDate,
 //     } = req.query;
-//     // console.log('query', req.query);
 //     logger.info('Received request to fetch sheet data', { user: req.user, query: req.query });
 //     // Build the filters object
 //     const filters = {};
@@ -105,7 +104,6 @@ const sheetDataController = async (req, res) => {
       multiplePropertyOwner: multiplePropertyOwner === 'true',
       entityId: entity_id,
     });
-    // console.log('filters', filters);
 
     logger.info('Sheet data fetched successfully', { totalItems: result.total });
     res.status(200).json({
@@ -174,7 +172,6 @@ const getSingleAuditData = async (req, res) => {
     const { id } = req.params; // Get sheet ID from request parameters
     const { role, connected_entity_id: connectedEntityIds } = req.user; // Get user role and connected entity IDs from the authenticated user
 
-    // console.log('from controller', role, connectedEntityIds);
     // Call the service to get single sheet data
     const sheetData = await getSingleSheetDataService(id, role, connectedEntityIds);
 
