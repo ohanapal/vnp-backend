@@ -41,7 +41,6 @@ const sheetDataController = async (req, res) => {
       filters.startDate = startDate;
       filters.endDate = endDate;
     }
-    if (entityId) filters.entityId = entityId;
     const result = await getPropertySheetData({
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
@@ -51,6 +50,7 @@ const sheetDataController = async (req, res) => {
       filters,
       role,
       connectedEntityIds,
+      entityId,
     });
 
     res.status(200).json({

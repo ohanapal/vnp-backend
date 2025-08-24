@@ -18,7 +18,7 @@ const sheetDataSchema = new mongoose.Schema(
     contracts: {
       type: String,
     },
-   
+
     expedia: {
       expedia_id: { type: String, required: true }, // Expedia ID
       review_status: { type: String }, // Expedia Review Status
@@ -29,7 +29,6 @@ const sheetDataSchema = new mongoose.Schema(
       amount_confirmed: { type: String }, // Expedia Amount Confirmed by Property
       username: {
         type: String,
-  
       },
       user_email: {
         type: String,
@@ -46,7 +45,6 @@ const sheetDataSchema = new mongoose.Schema(
       amount_confirmed: { type: String }, // Booking.com Amount Confirmed by Property
       username: {
         type: String,
-  
       },
       user_password: {
         type: String,
@@ -78,6 +76,6 @@ sheetDataSchema.index({ 'booking.amount_confirmed': 1 }); // Index on booking.am
 sheetDataSchema.index({ 'agoda.amount_collectable': 1 }); // Index on agoda.amount_collectable
 sheetDataSchema.index({ 'agoda.amount_confirmed': 1 });
 
-const sheetData = mongoose.model('sheetData', sheetDataSchema);
+const sheetDataModel = mongoose.model('sheetData', sheetDataSchema);
 
-module.exports = sheetData;
+module.exports = sheetDataModel;

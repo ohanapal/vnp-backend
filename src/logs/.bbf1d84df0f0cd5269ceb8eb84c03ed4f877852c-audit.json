@@ -1,0 +1,20 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "C:\\Users\\Naimur\\Documents\\RebelForce\\VNP\\vnp-backend\\src\\logs\\.bbf1d84df0f0cd5269ceb8eb84c03ed4f877852c-audit.json",
+    "files": [
+        {
+            "date": 1755772779485,
+            "name": "C:\\Users\\Naimur\\Documents\\RebelForce\\VNP\\vnp-backend\\src\\logs\\error-2025-08-21.log",
+            "hash": "1cb254411589ff54ce9cd83c7ea5f7a7da353c836a643e43d4063785e4630fc2"
+        },
+        {
+            "date": 1756050468828,
+            "name": "C:\\Users\\Naimur\\Documents\\RebelForce\\VNP\\vnp-backend\\src\\logs\\error-2025-08-24.log",
+            "hash": "ec6c768b208e3d2943dd5d9abc7af5ac5aeec85136c808acd040a0e91f749776"
+        }
+    ],
+    "hashType": "sha256"
+}
