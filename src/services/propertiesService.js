@@ -80,26 +80,50 @@ const getPropertySheetData = async ({
     // Handle explicit entityId filter for all roles
     if (entityId) {
       const castId = ObjectId.isValid(entityId) ? new ObjectId(entityId) : entityId;
-      let entityCondition = {};
-      if (role === 'admin') {
-        entityCondition = { $or: [{ portfolio_name: castId }, { sub_portfolio: castId }, { property_name: castId }] };
-      } else if (role === 'portfolio') {
-        entityCondition = { portfolio_name: castId };
-      } else if (role === 'sub-portfolio') {
-        entityCondition = { sub_portfolio: castId };
-      } else if (role === 'property') {
-        entityCondition = { property_name: castId };
-      }
 
-      // Merge entity condition with any existing conditions safely
-      if (query.$and) {
-        query.$and.push(entityCondition);
-      } else if (query.$or && entityCondition.$or) {
-        // Intersect existing $or (e.g., search) with entity $or
-        query.$and = [{ $or: query.$or }, entityCondition];
-        delete query.$or;
+      if (role === 'admin') {
+        // Admin can access any entity
+        const entityCondition = { $or: [{ portfolio_name: castId }, { sub_portfolio: castId }, { property_name: castId }] };
+        if (query.$and) {
+          query.$and.push(entityCondition);
+        } else if (query.$or) {
+          // Intersect existing $or (e.g., search) with entity $or
+          query.$and = [{ $or: query.$or }, entityCondition];
+          delete query.$or;
+        } else {
+          Object.assign(query, entityCondition);
+        }
       } else {
-        Object.assign(query, entityCondition);
+        // Non-admin users: verify they have access to the specific entity
+        let isAuthorized = false;
+        let entityCondition = {};
+
+        if (role === 'portfolio') {
+          isAuthorized = connectedEntityIds.includes(castId.toString()) || connectedEntityIds.includes(entityId);
+          entityCondition = { portfolio_name: castId };
+        } else if (role === 'sub-portfolio') {
+          isAuthorized = connectedEntityIds.includes(castId.toString()) || connectedEntityIds.includes(entityId);
+          entityCondition = { sub_portfolio: castId };
+        } else if (role === 'property') {
+          isAuthorized = connectedEntityIds.includes(castId.toString()) || connectedEntityIds.includes(entityId);
+          entityCondition = { property_name: castId };
+        }
+
+        if (!isAuthorized) {
+          // Return empty results if user doesn't have access to this entity
+          return { data: [], total: 0 };
+        }
+
+        // Merge the entity condition
+        if (query.$and) {
+          query.$and.push(entityCondition);
+        } else if (query.$or) {
+          // Intersect existing $or (e.g., search) with entity condition
+          query.$and = [{ $or: query.$or }, entityCondition];
+          delete query.$or;
+        } else {
+          Object.assign(query, entityCondition);
+        }
       }
     }
 
