@@ -245,7 +245,9 @@ exports.getMe = async (req, res) => {
     const userId = req.user.id;
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 20;
-    const result = await userService.getMe(userId, page, limit);
+    const search = req.query.search || '';
+
+    const result = await userService.getMe(userId, page, limit, search);
     return res.status(200).json(result);
   } catch (error) {
     logger.error('Failed to fetch user details', { error: error.message });

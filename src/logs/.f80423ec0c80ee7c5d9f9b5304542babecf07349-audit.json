@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/home/mahi/Projects/rebelforce/vnp-backend/src/logs/.f80423ec0c80ee7c5d9f9b5304542babecf07349-audit.json",
+    "files": [
+        {
+            "date": 1756014417250,
+            "name": "/home/mahi/Projects/rebelforce/vnp-backend/src/logs/application-2025-08-24.log",
+            "hash": "8b1ebab7918f2079e1c687ce08b006ba78e993a61177609d860d875b75de5e65"
+        }
+    ],
+    "hashType": "sha256"
+}

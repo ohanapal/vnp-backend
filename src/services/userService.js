@@ -744,7 +744,7 @@ exports.getAllPortfoliosSubPortfoliosPropertiesName = async (role, connectedEnti
   }
 };
 
-exports.getMe = async (userId, page = 1, limit = 20) => {
+exports.getMe = async (userId, page = 1, limit = 20, search = '') => {
   const user = await User.findById(userId);
   if (!user) {
     throw new Error('User not found');
@@ -757,10 +757,11 @@ exports.getMe = async (userId, page = 1, limit = 20) => {
   const connectedIds = Array.isArray(user.connected_entity_id) ? user.connected_entity_id.map((id) => new ObjectId(id)) : [];
 
   if (role === 'admin') {
+    const searchConditions = search ? { name: { $regex: search, $options: 'i' } } : {};
     // For admin, return all portfolios with propertyCount and pagination
     const [total, portfolios] = await Promise.all([
-      Portfolio.countDocuments({}),
-      Portfolio.find({}, { name: 1 }).skip(skip).limit(limit).lean(),
+      Portfolio.countDocuments(searchConditions),
+      Portfolio.find(searchConditions, { name: 1 }).skip(skip).limit(limit).lean(),
     ]);
 
     const pagePortfolioIds = portfolios.map((p) => p._id);
@@ -798,9 +799,10 @@ exports.getMe = async (userId, page = 1, limit = 20) => {
   }
 
   if (role === 'portfolio') {
+    const searchConditions = search ? { name: { $regex: search, $options: 'i' } } : {};
     const [total, portfolios] = await Promise.all([
-      Portfolio.countDocuments({ _id: { $in: connectedIds } }),
-      Portfolio.find({ _id: { $in: connectedIds } }, { name: 1 })
+      Portfolio.countDocuments({ _id: { $in: connectedIds }, ...searchConditions }),
+      Portfolio.find({ _id: { $in: connectedIds }, ...searchConditions }, { name: 1 })
         .skip(skip)
         .limit(limit)
         .lean(),
@@ -842,9 +844,10 @@ exports.getMe = async (userId, page = 1, limit = 20) => {
   }
 
   if (role === 'sub-portfolio') {
+    const searchConditions = search ? { name: { $regex: search, $options: 'i' } } : {};
     const [total, subPortfolios] = await Promise.all([
-      SubPortfolio.countDocuments({ _id: { $in: connectedIds } }),
-      SubPortfolio.find({ _id: { $in: connectedIds } }, { name: 1 })
+      SubPortfolio.countDocuments({ _id: { $in: connectedIds }, ...searchConditions }),
+      SubPortfolio.find({ _id: { $in: connectedIds }, ...searchConditions }, { name: 1 })
         .skip(skip)
         .limit(limit)
         .lean(),

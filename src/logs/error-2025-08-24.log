@@ -1,0 +1,15 @@
+2025-08-24 13:02:52 [[31merror[39m]: You are not permitted! {"statusCode":403,"status":"fail","isOperational":true}
+2025-08-24 13:03:05 [[31merror[39m]: You are not permitted! {"statusCode":403,"status":"fail","isOperational":true}
+2025-08-24 13:06:11 [[31merror[39m]: You are not permitted! {"statusCode":403,"status":"fail","isOperational":true}
+2025-08-24 13:06:26 [[31merror[39m]: You are not permitted! {"statusCode":403,"status":"fail","isOperational":true}
+2025-08-24 13:07:07 [[31merror[39m]: You are not permitted! {"statusCode":403,"status":"fail","isOperational":true}
+2025-08-24 13:59:36 [[31merror[39m]: Error fetching sheet data {"error":"Error fetching data: input must be a 24 character hex string, 12 byte Uint8Array, or an integer"}
+2025-08-24 13:59:38 [[31merror[39m]: Error fetching sheet data {"error":"Error fetching data: input must be a 24 character hex string, 12 byte Uint8Array, or an integer"}
+2025-08-24 13:59:40 [[31merror[39m]: Error fetching sheet data {"error":"Error fetching data: input must be a 24 character hex string, 12 byte Uint8Array, or an integer"}
+2025-08-24 13:59:44 [[31merror[39m]: Error fetching sheet data {"error":"Error fetching data: input must be a 24 character hex string, 12 byte Uint8Array, or an integer"}
+2025-08-24 14:00:06 [[31merror[39m]: Error fetching sheet data {"error":"Error fetching data: input must be a 24 character hex string, 12 byte Uint8Array, or an integer"}
+2025-08-24 14:00:07 [[31merror[39m]: Error fetching sheet data {"error":"Error fetching data: input must be a 24 character hex string, 12 byte Uint8Array, or an integer"}
+2025-08-24 14:00:09 [[31merror[39m]: Error fetching sheet data {"error":"Error fetching data: input must be a 24 character hex string, 12 byte Uint8Array, or an integer"}
+2025-08-24 14:00:14 [[31merror[39m]: Error fetching sheet data {"error":"Error fetching data: input must be a 24 character hex string, 12 byte Uint8Array, or an integer"}
+2025-08-24 14:23:46 [[31merror[39m]: Login failed {"email":"vnp@admin.com","error":"Invalid password"}
+2025-08-24 14:23:46 [[31merror[39m]: Invalid password {"statusCode":400,"status":"fail","isOperational":true}
