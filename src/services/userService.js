@@ -770,11 +770,10 @@ exports.getMe = async (userId, page = 1, limit = 20, search = '') => {
       {
         $group: {
           _id: '$portfolio_name',
-          propertyIds: { $addToSet: '$property_name' },
+          propertyIds: { $sum: 1 },
           lastUpdated: { $max: '$updatedAt' },
         },
       },
-      { $project: { _id: 1, propertyCount: { $size: '$propertyIds' }, lastUpdated: 1 } },
     ]);
     const idToCount = new Map(counts.map((c) => [c._id.toString(), c.propertyCount]));
     const idToLastUpdated = new Map(counts.map((c) => [c._id.toString(), c.lastUpdated]));
@@ -808,17 +807,16 @@ exports.getMe = async (userId, page = 1, limit = 20, search = '') => {
         .lean(),
     ]);
 
-    // Count distinct properties per portfolio using sheet data
+    // Count total sheet data records per portfolio
     const counts = await sheetDataModel.aggregate([
       { $match: { portfolio_name: { $in: connectedIds } } },
       {
         $group: {
           _id: '$portfolio_name',
-          propertyCount: { $addToSet: '$property_name' },
+          propertyCount: { $sum: 1 }, // Count all records, not just unique properties
           lastUpdated: { $max: '$updatedAt' },
         },
       },
-      { $project: { _id: 1, propertyCount: { $size: '$propertyCount' }, lastUpdated: 1 } },
     ]);
 
     const portfolioIdToCount = new Map(counts.map((c) => [c._id.toString(), c.propertyCount]));
@@ -859,11 +857,10 @@ exports.getMe = async (userId, page = 1, limit = 20, search = '') => {
       {
         $group: {
           _id: '$sub_portfolio',
-          propertyCount: { $addToSet: '$property_name' },
+          propertyCount: { $sum: 1 }, // Count all records, not just unique properties
           lastUpdated: { $max: '$updatedAt' },
         },
       },
-      { $project: { _id: 1, propertyCount: { $size: '$propertyCount' }, lastUpdated: 1 } },
     ]);
 
     const subPortfolioIdToCount = new Map(counts.map((c) => [c._id.toString(), c.propertyCount]));
