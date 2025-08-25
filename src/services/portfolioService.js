@@ -53,7 +53,7 @@ const getAllPortfoliosName = async (role, connectedEntityIds, search = '') => {
     query[fieldToMatch] = { $in: connectedEntityIds };
 
     // Fetch and populate portfolio names with search applied
-    const matchedData = await sheetdataModel
+    const matchedData = await sheetDataModel
       .find(query, 'portfolio_name') // Fetch only the portfolio_name field
       .populate({
         path: 'portfolio_name',

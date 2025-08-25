@@ -7,7 +7,6 @@ const {
 } = require('../services/dashboardService'); // Adjust the path to your services
 
 const revenue = async (req, res) => {
-  console.log('Revenue metrics requested');
   try {
     const { role, connected_entity_id: connectedEntityIds } = req.user;
     const { startDate, endDate, propertyName } = req.query;

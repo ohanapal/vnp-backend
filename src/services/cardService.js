@@ -3,6 +3,9 @@ const portfolioModel = require('../models/portfolioModel'); // Replace with the 
 const AppError = require('../utils/appError');
 const moment = require('moment');
 const PropertyModel = require('../models/propertyModel');
+const {
+  Types: { ObjectId },
+} = require('mongoose');
 
 // const calculateMetrics = async (role, connectedEntityIds, selectedPortfolio, startDate, endDate) => {
 //   try {
@@ -455,15 +458,7 @@ const PropertyModel = require('../models/propertyModel');
 // };
 
 // NEW CALCULATE METRICS with aggregation
-const calculateMetrics = async (
-  role,
-  connectedEntityIds,
-  selectedPortfolio,
-  startDate,
-  endDate,
-  entityId,
-  multiplePropertyOwner = false,
-) => {
+const calculateMetrics = async (role, connectedEntityIds, startDate, endDate, entityId, multiplePropertyOwner = false) => {
   try {
     let query = {};
 
@@ -474,7 +469,6 @@ const calculateMetrics = async (
       if (isNaN(start.valueOf()) || isNaN(end.valueOf())) {
         throw new AppError('Invalid date range provided', 400);
       }
-      console.log('calculateMetrics: date range', { start, end });
 
       query = {
         $and: [{ from: { $lte: end } }, { to: { $gte: start } }],
@@ -482,30 +476,28 @@ const calculateMetrics = async (
     }
 
     if (role !== 'admin') {
-      console.log('calculateMetrics: non-admin role branch', { role, entityId, multiplePropertyOwner });
       if (!connectedEntityIds || connectedEntityIds.length === 0) {
         throw new AppError('No connected entity IDs provided for this role.', 403);
       }
 
       // If a specific entity id is provided, filter strictly to that entity
       if (entityId) {
-        if (role === 'portfolio') query.portfolio_name = entityId;
-        if (role === 'sub-portfolio') query.sub_portfolio = entityId;
-        if (role === 'property') query.property_name = entityId;
+        if (role === 'portfolio') query.portfolio_name = new ObjectId(entityId);
+        if (role === 'sub-portfolio') query.sub_portfolio = new ObjectId(entityId);
+        if (role === 'property') query.property_name = new ObjectId(entityId);
       } else if (multiplePropertyOwner && role === 'property') {
         // For property role with multiple ownership flag, include all connected properties
-        query.property_name = { $in: connectedEntityIds };
-        console.log('calculateMetrics: multi-property owner query', { query });
+        query.property_name = { $in: connectedEntityIds.map((id) => new ObjectId(id)) };
       } else {
         const entityQuery = [];
         if (role === 'portfolio') {
-          entityQuery.push({ portfolio_name: { $in: connectedEntityIds } });
+          entityQuery.push({ portfolio_name: { $in: connectedEntityIds.map((id) => new ObjectId(id)) } });
         }
         if (role === 'sub-portfolio') {
-          entityQuery.push({ sub_portfolio: { $in: connectedEntityIds } });
+          entityQuery.push({ sub_portfolio: { $in: connectedEntityIds.map((id) => new ObjectId(id)) } });
         }
         if (role === 'property') {
-          entityQuery.push({ property_name: { $in: connectedEntityIds } });
+          entityQuery.push({ property_name: { $in: connectedEntityIds.map((id) => new ObjectId(id)) } });
         }
 
         if (entityQuery.length > 0) {
@@ -516,8 +508,11 @@ const calculateMetrics = async (
       // For admin, if a selectedPortfolio is provided (and not "all"), filter by that portfolio.
       if (entityId) {
         // Admin can filter by explicit entity id as well
-        query.$or = [{ portfolio_name: entityId }, { sub_portfolio: entityId }, { property_name: entityId }];
-        console.log('calculateMetrics: admin entity filter', { query });
+        query.$or = [
+          { portfolio_name: new ObjectId(entityId) },
+          { sub_portfolio: new ObjectId(entityId) },
+          { property_name: new ObjectId(entityId) },
+        ];
       }
       // Otherwise, admin sees all data (no further filtering by connectedEntityIds)
     }

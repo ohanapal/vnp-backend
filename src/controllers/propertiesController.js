@@ -27,8 +27,6 @@ const sheetDataController = async (req, res) => {
       endDate,
       entityId,
     } = req.query;
-    // console.log('query', req.query);
-    // console.log('req, query', req.query);
     // const decodedPostingType = posting_type ? decodeURIComponent(posting_type.trim()) : undefined;
 
     // Build the filters object
@@ -41,7 +39,6 @@ const sheetDataController = async (req, res) => {
       filters.startDate = startDate;
       filters.endDate = endDate;
     }
-    if (entityId) filters.entityId = entityId;
     const result = await getPropertySheetData({
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
@@ -51,14 +48,23 @@ const sheetDataController = async (req, res) => {
       filters,
       role,
       connectedEntityIds,
+      entityId,
     });
+
+    let ahmHotelsCount = 0;
+    result.data.forEach((item) => {
+      if (item?.portfolio_name?.name === 'ahm hotels') {
+        ahmHotelsCount++;
+      }
+    });
+    console.log('Number of "ahm hotels":', ahmHotelsCount);
 
     res.status(200).json({
       success: true,
       message: 'Data fetched successfully',
       data: result.data,
       pagination: {
-        currentPage: page,
+        currentPage: +page,
         totalPages: Math.ceil(result.total / limit),
         totalItems: result.total,
       },
@@ -111,7 +117,6 @@ const getSingleSheetData = async (req, res) => {
     const { id } = req.params; // Get sheet ID from request parameters
     const { role, connected_entity_id: connectedEntityIds } = req.user; // Get user role and connected entity IDs from the authenticated user
 
-    // console.log('from controller', role, connectedEntityIds);
     // Call the service to get single sheet data
     const sheetData = await getSingleSheetDataService(id, role, connectedEntityIds);
 
