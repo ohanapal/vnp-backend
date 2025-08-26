@@ -761,11 +761,10 @@ exports.getMe = async (userId, page = 1, limit = 20, search = '') => {
     // For admin, return all portfolios with propertyCount and pagination
     const [total, portfolios] = await Promise.all([
       Portfolio.countDocuments(searchConditions),
-      Portfolio.find(searchConditions, { name: 1 }).skip(skip).limit(limit).lean(),
+      Portfolio.find(searchConditions, { name: 1, contracts: 1 }).skip(skip).limit(limit).lean(),
     ]);
 
     const pagePortfolioIds = portfolios.map((p) => p._id);
-    console.log('pagePortfolioIds', pagePortfolioIds);
     const counts = await sheetDataModel.aggregate([
       { $match: { portfolio_name: { $in: pagePortfolioIds } } },
       {
@@ -782,6 +781,7 @@ exports.getMe = async (userId, page = 1, limit = 20, search = '') => {
     const data = portfolios.map((p) => ({
       _id: p._id,
       name: p.name,
+      contracts: p.contracts || null,
       propertyCount: idToCount.get(p._id.toString()) || 0,
       lastUpdated: idToLastUpdated.get(p._id.toString()) || null,
     }));
@@ -802,7 +802,7 @@ exports.getMe = async (userId, page = 1, limit = 20, search = '') => {
     const searchConditions = search ? { name: { $regex: search, $options: 'i' } } : {};
     const [total, portfolios] = await Promise.all([
       Portfolio.countDocuments({ _id: { $in: connectedIds }, ...searchConditions }),
-      Portfolio.find({ _id: { $in: connectedIds }, ...searchConditions }, { name: 1 })
+      Portfolio.find({ _id: { $in: connectedIds }, ...searchConditions }, { name: 1, contracts: 1 })
         .skip(skip)
         .limit(limit)
         .lean(),
@@ -826,6 +826,7 @@ exports.getMe = async (userId, page = 1, limit = 20, search = '') => {
     const data = portfolios.map((p) => ({
       _id: p._id,
       name: p.name,
+      contracts: p.contracts || null,
       propertyCount: portfolioIdToCount.get(p._id.toString()) || 0,
       lastUpdated: portfolioIdToLastUpdated.get(p._id.toString()) || null,
     }));
@@ -846,7 +847,7 @@ exports.getMe = async (userId, page = 1, limit = 20, search = '') => {
     const searchConditions = search ? { name: { $regex: search, $options: 'i' } } : {};
     const [total, subPortfolios] = await Promise.all([
       SubPortfolio.countDocuments({ _id: { $in: connectedIds }, ...searchConditions }),
-      SubPortfolio.find({ _id: { $in: connectedIds }, ...searchConditions }, { name: 1 })
+      SubPortfolio.find({ _id: { $in: connectedIds }, ...searchConditions }, { name: 1, contracts: 1 })
         .skip(skip)
         .limit(limit)
         .lean(),
@@ -870,6 +871,7 @@ exports.getMe = async (userId, page = 1, limit = 20, search = '') => {
     const data = subPortfolios.map((sp) => ({
       _id: sp._id,
       name: sp.name,
+      contracts: sp.contracts || null,
       propertyCount: subPortfolioIdToCount.get(sp._id.toString()) || 0,
       lastUpdated: subPortfolioIdToLastUpdated.get(sp._id.toString()) || null,
     }));
@@ -889,12 +891,12 @@ exports.getMe = async (userId, page = 1, limit = 20, search = '') => {
   if (role === 'property') {
     const [total, properties] = await Promise.all([
       Property.countDocuments({ _id: { $in: connectedIds } }),
-      Property.find({ _id: { $in: connectedIds } }, { name: 1 })
+      Property.find({ _id: { $in: connectedIds } }, { name: 1, contracts: 1 })
         .skip(skip)
         .limit(limit)
         .lean(),
     ]);
-    const data = properties.map((pr) => ({ _id: pr._id, name: pr.name }));
+    const data = properties.map((pr) => ({ _id: pr._id, name: pr.name, contracts: pr.contracts || null }));
     return {
       success: true,
       role,

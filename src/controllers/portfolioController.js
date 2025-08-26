@@ -1,4 +1,10 @@
-const { getAllPortfoliosName, createPortfolio, updatePortfolio, deletePortfolio } = require('../services/portfolioService');
+const {
+  getAllPortfoliosName,
+  createPortfolio,
+  updatePortfolio,
+  deletePortfolio,
+  uploadContractService,
+} = require('../services/portfolioService');
 
 const getAllPortfolios = async (req, res) => {
   const { role, connected_entity_id: connectedEntityIds } = req.user;
@@ -74,9 +80,31 @@ const deletePortfolioController = async (req, res) => {
   }
 };
 
+const uploadContractController = async (req, res) => {
+  try {
+    const data = req.body; // Expecting an array of objects [{ id, uploadedUrl }]
+
+    if (!Array.isArray(data) || data.length === 0) {
+      return res.status(400).json({
+        error: 'Invalid input: Request body should be a non-empty array.',
+      });
+    }
+
+    const { successfulUpdates, failedUpdates } = await uploadContractService(data);
+
+    res.status(200).json({ data: successfulUpdates });
+  } catch (error) {
+    console.error('Error processing portfolio contract file updates:', error);
+    res.status(500).json({
+      error: 'Internal server error. Please try again later.',
+    });
+  }
+};
+
 module.exports = {
   getAllPortfolios,
   createPortfolioController,
   updatePortfolioController,
   deletePortfolioController,
+  uploadContractController,
 };

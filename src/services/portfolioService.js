@@ -134,9 +134,45 @@ const deletePortfolio = async (id) => {
   return deletedPortfolio;
 };
 
+const uploadContractService = async (data) => {
+  const updatePromises = data.map(async ({ id, uploadedUrl }) => {
+    try {
+      const updatedPortfolio = await portfolioModel.findByIdAndUpdate(
+        id,
+        { contracts: uploadedUrl },
+        { new: true, runValidators: true },
+      );
+
+      if (!updatedPortfolio) {
+        throw new Error(`Portfolio with ID ${id} not found.`);
+      }
+
+      return { status: 'fulfilled', id, updatedPortfolio };
+    } catch (error) {
+      return { status: 'rejected', id, error: error.message };
+    }
+  });
+
+  // Use Promise.allSettled to ensure we capture all outcomes
+  const results = await Promise.allSettled(updatePromises);
+
+  // Parse results to separate successes and failures
+  const successfulUpdates = results.filter((result) => result.status === 'fulfilled').map((result) => result.value);
+
+  const failedUpdates = results
+    .filter((result) => result.status === 'rejected')
+    .map((result) => ({
+      id: result.reason?.id || 'Unknown',
+      error: result.reason?.error || 'Unknown error',
+    }));
+
+  return { successfulUpdates, failedUpdates };
+};
+
 module.exports = {
   getAllPortfoliosName,
   createPortfolio,
   deletePortfolio,
   updatePortfolio,
+  uploadContractService,
 };

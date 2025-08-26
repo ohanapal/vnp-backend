@@ -4,6 +4,7 @@ const {
   createPortfolioController,
   updatePortfolioController,
   deletePortfolioController,
+  uploadContractController,
 } = require('../controllers/portfolioController');
 const { authMiddleware } = require('../middlewares/authMiddleware');
 
@@ -14,5 +15,6 @@ router.get('/get-portfolios', authMiddleware('admin', 'sub-portfolio', 'portfoli
 router.post('/create', authMiddleware('admin'), createPortfolioController);
 router.put('/update/:id', authMiddleware('admin'), updatePortfolioController);
 router.delete('/delete/:id', authMiddleware('admin'), deletePortfolioController);
+router.put('/upload-contract-file', authMiddleware('admin'), uploadContractController);
 
 module.exports = router;
