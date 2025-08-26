@@ -765,12 +765,13 @@ exports.getMe = async (userId, page = 1, limit = 20, search = '') => {
     ]);
 
     const pagePortfolioIds = portfolios.map((p) => p._id);
+    console.log('pagePortfolioIds', pagePortfolioIds);
     const counts = await sheetDataModel.aggregate([
       { $match: { portfolio_name: { $in: pagePortfolioIds } } },
       {
         $group: {
           _id: '$portfolio_name',
-          propertyIds: { $sum: 1 },
+          propertyCount: { $sum: 1 },
           lastUpdated: { $max: '$updatedAt' },
         },
       },
